@@ -106,7 +106,7 @@ def synthetic_block(cfg) -> str:
         ("Perishable SKUs", f"{syn.perishable_share:.0%} of SKUs; {syn.spoilage_rate_per_week:.0%} of leftover stock written off per week at {syn.salvage_frac_of_cost:.0%} of cost", "synthetic.perishable_share, spoilage_rate_per_week, salvage_frac_of_cost"),
         ("Holding + capital cost", f"{syn.holding_rate_annual:.0%} + {syn.capital_rate_annual:.0%} of unit cost per year (decision parameter, not a simulated cash flow)", "synthetic.holding_rate_annual, capital_rate_annual"),
         ("Fixed costs", f"{syn.fixed_cost_share_of_gross_margin:.0%} of pre-window gross margin on average; part is paid as a lump every {syn.fixed_cost_lump_every_weeks} weeks, sized by the stress level", "synthetic.fixed_cost_*"),
-        ("Opening cash", "set per scenario, in weeks of average fixed costs", "experiments.start_cash_weeks"),
+        ("Opening cash", "buffer + cushion x s x R*, where s is the stress level and R* the ideal weekly replenishment cost; cushion is set per scenario", "experiments.cash_cushions"),
         ("Cash buffer", f"{cfg.risk.buffer_weeks_of_fixed_costs:g} weeks of average fixed costs", "risk.buffer_weeks_of_fixed_costs"),
         ("Opening stock, pipeline, payables", f"whatever policy A leaves after a {syn.burn_in_weeks}-week burn-in with ample cash", "synthetic.burn_in_weeks"),
         ("Seed", f"{cfg.seed}", "seed"),
@@ -201,9 +201,9 @@ def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
 
     cash_rows = []
     cash_scope = metrics[metrics["role"].isin(list(exp.headline.roles)) & (metrics["shortfall_rule"] == str(exp.headline.shortfall_rule)) & (metrics["stress"] == float(exp.default_stress))]
-    for c, g in aggregate(cash_scope, ["start_cash_weeks"]).groupby("start_cash_weeks"):
+    for c, g in aggregate(cash_scope, ["cash_cushion"]).groupby("cash_cushion"):
         g = g.set_index("policy")
-        row = {"Opening cash (weeks of fixed costs)": f"{c:g}"}
+        row = {"Opening free cash (x stress x R*)": f"{c:g}"}
         for p in [p for p in ("A", "B", "D", "C") if p in g.index]:
             row[f"{p} shortfall wks"] = int(g.loc[p].shortfall_weeks)
         for p in [p for p in ("A", "B", "D", "C") if p in g.index]:

@@ -3,6 +3,7 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+data/processed_*/
 
 # partial runs are scratch; full runs under results/<run_id>/ are committed on purpose
 results/*_tune/

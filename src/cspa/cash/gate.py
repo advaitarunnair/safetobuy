@@ -57,6 +57,7 @@ def safe_budget(
     on_infeasible: str = "max_prob",
     tail: Callable[[float], tuple] | None = None,
     n_refine: int = 6,
+    max_prob_tol: float = 0.0,
 ) -> BudgetResult:
     """Search [0, B_max] for the largest feasible budget.
 
@@ -72,7 +73,10 @@ def safe_budget(
                    the best one. Ties (common when every budget has probability 0) are
                    broken by tail(B), a tuple compared lexicographically (the policy
                    passes the alpha-quantile of minimum cash, then of end-of-horizon
-                   cash), and finally by the larger B.
+                   cash), and finally by the larger B. With max_prob_tol > 0, probabilities
+                   within that tolerance of the best count as tied, so the tail measure
+                   decides among them: probabilities estimated from a few hundred paths are
+                   not precise enough to justify a large cut for a point or two.
       "zero"     : return B = 0. This was the original specification; in a closed loop
                    it can spiral (no purchases, no sales, no cash) and is kept only for
                    comparison.
@@ -155,6 +159,9 @@ def safe_budget(
                 lo, hi = cands[max(i - 1, 0)], cands[min(i + 1, len(cands) - 1)]
                 finer = [float(x) for x in np.linspace(lo, hi, n_refine + 2)[1:-1]]
                 best = max([best, *finer], key=key)
+            if max_prob_tol > 0:
+                near = [B for B, p in seen.items() if p >= ev(best) - max_prob_tol - 1e-12]
+                best = max(near, key=lambda B: key(B)[1:])
         elif on_infeasible != "zero":
             raise ValueError(f"unknown on_infeasible '{on_infeasible}'")
         return result(best, STATUS_AT_RISK, violations)

@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture(scope="module")
 def scenario(exp, panel):
     w = resolve_windows(exp, panel.n_obs)[-1]
-    return Scenario(w, 0.5, 3.0, "overdraft")
+    return Scenario(w, 0.5, 1.5, "overdraft")
 
 
 @pytest.fixture(scope="module")
@@ -73,7 +73,7 @@ def test_fixed_seed_reproduces_identical_results(result, panel, params, cache, c
 def test_world_calibration_matches_its_definition(panel, params, cfg):
     start = 240
     for s in (0.5, 0.7, 0.9):
-        cal = calibrate_world(panel, params, cfg, start, s, 3.0)
+        cal = calibrate_world(panel, params, cfg, start, s, 0.5)
         m, off = cal.lump_every, cal.lump_offset
         sched = cal.schedule(start, 2 * m)
         assert sched.mean() == pytest.approx(cal.fixed_avg)  # lumps redistribute fixed costs, they do not add to them
@@ -82,7 +82,7 @@ def test_world_calibration_matches_its_definition(panel, params, cfg):
         lump_week = start + off
         assert cal.rev_star - cal.fixed(lump_week) == pytest.approx(s * cal.repl_star)  # the definition of stress
         assert cal.buffer == pytest.approx(cfg.risk.buffer_weeks_of_fixed_costs * cal.fixed_avg)
-        assert cal.start_cash == pytest.approx(3.0 * cal.fixed_avg)
+        assert cal.start_cash == pytest.approx(cal.buffer + 0.5 * s * cal.repl_star)  # free cash shrinks with s too
         assert cal.gm_star == pytest.approx(cal.rev_star - cal.repl_star) and cal.gm_star > 0
 
 
@@ -131,7 +131,7 @@ def fake_weekly(sf: dict, gm: dict, weeks: int = 12) -> pd.DataFrame:
     rows = []
     for pol in ("A", "B", "C"):
         for t in range(weeks):
-            rows.append({"scenario": "S", "window": "W", "role": "holdout", "stress": 0.7, "start_cash_weeks": 3.0, "shortfall_rule": "overdraft", "policy": pol, "t": t, "shortfall": t < sf[pol], "insolvent": False, "gross_margin": gm[pol]})
+            rows.append({"scenario": "S", "window": "W", "role": "holdout", "stress": 0.7, "cash_cushion": 0.5, "shortfall_rule": "overdraft", "policy": pol, "t": t, "shortfall": t < sf[pol], "insolvent": False, "gross_margin": gm[pol]})
     return pd.DataFrame(rows)
 
 
@@ -161,7 +161,7 @@ def test_headline_uses_the_planned_form_only_when_the_run_supports_it():
 def test_headline_set_scopes(result, exp):
     hs = headline_set(result["weekly"], exp, 1)
     assert hs["main"] is None  # this scenario's opening cash is not the default one, so it is outside the headline scope
-    wk = result["weekly"].assign(start_cash_weeks=float(exp.default_start_cash_weeks))
+    wk = result["weekly"].assign(cash_cushion=float(exp.default_cash_cushion))
     hs = headline_set(wk, exp, 1)
     assert hs["main"]["n_scenarios"] == 1 and "holdout" in hs["main"]["scope"]
     assert set(hs["by_rule"]) == {"overdraft"} and set(hs["by_stress"]) == {"0.5"}

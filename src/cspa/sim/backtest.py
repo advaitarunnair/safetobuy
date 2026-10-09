@@ -37,12 +37,12 @@ class Window:
 class Scenario:
     window: Window
     stress: float
-    start_cash_weeks: float
+    cash_cushion: float
     shortfall_rule: str
 
     @property
     def id(self) -> str:
-        return f"{self.window.name}_s{int(round(self.stress * 100))}_c{self.start_cash_weeks:g}_{self.shortfall_rule}"
+        return f"{self.window.name}_s{int(round(self.stress * 100))}_c{self.cash_cushion:g}_{self.shortfall_rule}"
 
     def fields(self) -> dict:
         return {
@@ -50,7 +50,7 @@ class Scenario:
             "window": self.window.name,
             "role": self.window.role,
             "stress": self.stress,
-            "start_cash_weeks": self.start_cash_weeks,
+            "cash_cushion": self.cash_cushion,
             "shortfall_rule": self.shortfall_rule,
         }
 
@@ -95,8 +95,8 @@ def decision_cutoffs(exp, n_obs: int, roles: tuple[str, ...] | None = None) -> n
 def scenario_grid(exp, n_obs: int) -> list[Scenario]:
     """Stress sweep at the default opening cash, plus an opening-cash sweep at the default stress."""
     wins = resolve_windows(exp, n_obs)
-    combos = [(float(s), float(exp.default_start_cash_weeks)) for s in exp.stress_levels]
-    combos += [(float(exp.default_stress), float(c)) for c in exp.start_cash_weeks if float(c) != float(exp.default_start_cash_weeks)]
+    combos = [(float(s), float(exp.default_cash_cushion)) for s in exp.stress_levels]
+    combos += [(float(exp.default_stress), float(c)) for c in exp.cash_cushions if float(c) != float(exp.default_cash_cushion)]
     return [Scenario(w, s, c, r) for r in exp.shortfall_rules for w in wins for s, c in combos]
 
 
@@ -125,7 +125,7 @@ class WorldCal:
         return np.array([self.fixed(week + j) for j in range(H)])
 
 
-def calibrate_world(panel: Panel, params: SkuParams, cfg, window_start: int, stress: float, start_cash_weeks: float) -> WorldCal:
+def calibrate_world(panel: Panel, params: SkuParams, cfg, window_start: int, stress: float, cash_cushion: float) -> WorldCal:
     """Turn a stress level and an opening-cash level into dollars.
 
     R*  = mean weekly cost of goods sold (synthetic unit cost x real units) over the
@@ -136,8 +136,9 @@ def calibrate_world(panel: Panel, params: SkuParams, cfg, window_start: int, str
     `fixed_cost_lump_every_weeks` weeks (rent / monthly payroll).
     Stress s sizes the lump so that, in a lump week,
         expected revenue - fixed costs = s x R*.
-    Opening cash = start_cash_weeks x average weekly fixed costs.
     Buffer       = risk.buffer_weeks_of_fixed_costs x average weekly fixed costs.
+    Opening cash = buffer + cash_cushion x s x R*: the free cash above the buffer also
+    shrinks with s, so a lower s is tighter in both the lump and the starting position.
     """
     syn = cfg.synthetic
     k = int(syn.calibration_weeks)
@@ -173,7 +174,7 @@ def calibrate_world(panel: Panel, params: SkuParams, cfg, window_start: int, str
         lump_every=m,
         lump_offset=off,
         buffer=float(cfg.risk.buffer_weeks_of_fixed_costs) * fixed_avg,
-        start_cash=float(start_cash_weeks) * fixed_avg,
+        start_cash=float(cfg.risk.buffer_weeks_of_fixed_costs) * fixed_avg + float(cash_cushion) * float(stress) * repl,
         stress=float(stress),
         stress_attainable=attainable,
     )
@@ -243,7 +244,7 @@ def run_scenario(panel: Panel, params: SkuParams, cache: ForecastCache, cfg, sce
     w = scenario.window
     if w.end >= panel.n_obs:
         raise ValueError("window runs past the observed data")
-    cal = calibrate_world(panel, params, cfg, w.start, scenario.stress, scenario.start_cash_weeks)
+    cal = calibrate_world(panel, params, cfg, w.start, scenario.stress, scenario.cash_cushion)
     H = int(cfg.horizons.cash_horizon_weeks)
     world = World(params, scenario.shortfall_rule)
     start = burn_in_state(panel, cache, params, cfg, w.start)

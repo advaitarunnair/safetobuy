@@ -137,7 +137,7 @@ def fig_backtest(run, manifest, exp) -> list[str]:
     pols = [p for p in POLICY_COLOR if p in set(scope["policy"])]
     core = [p for p in ("A", "B", "D", "C") if p in pols]
     by = aggregate(scope, ["stress"])
-    scope_txt = f"{'+'.join(exp.headline.roles)} windows, opening cash {exp.default_start_cash_weeks:g} wks of fixed costs, rule: {exp.headline.shortfall_rule}."
+    scope_txt = f"{'+'.join(exp.headline.roles)} windows, cash cushion {exp.default_cash_cushion:g}, rule: {exp.headline.shortfall_rule}."
 
     sf = by.pivot(index="stress", columns="policy", values="shortfall_weeks")[core]
     sf.index = [f"stress {int(round(s * 100))}%" for s in sf.index]
@@ -182,7 +182,7 @@ def fig_backtest(run, manifest, exp) -> list[str]:
     made.append("risk_return.png")
 
     ab = exp.app_bundle
-    one = weekly[(weekly["window"] == ab.window) & (weekly["stress"] == float(exp.default_stress)) & (weekly["start_cash_weeks"] == float(ab.start_cash_weeks)) & (weekly["shortfall_rule"] == ab.shortfall_rule)]
+    one = weekly[(weekly["window"] == ab.window) & (weekly["stress"] == float(exp.default_stress)) & (weekly["cash_cushion"] == float(ab.cash_cushion)) & (weekly["shortfall_rule"] == ab.shortfall_rule)]
     if not one.empty:
         fig, ax = plt.subplots(figsize=(7.6, 3.9))
         for p in core:

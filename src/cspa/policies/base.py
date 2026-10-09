@@ -129,8 +129,12 @@ class PlanContext:
         """P(demand over the cover period exceeds the current inventory position)."""
         return (self.info.cover > self.position[None, :]).mean(axis=0)
 
-    def simulate(self, qty: np.ndarray, paths: np.ndarray | None = None) -> CashPaths:
-        return simulate_cash(self.state, qty, self.info.sim_paths if paths is None else paths, self.info.price, self.p, self.info.fixed_costs, str(self.info.cfg.gate.continuation), bool(self.info.cfg.gate.charge_beyond_horizon))
+    def simulate(self, qty: np.ndarray, paths: np.ndarray | None = None, buffer: float | None = None) -> CashPaths:
+        g = self.info.cfg.gate
+        return simulate_cash(
+            self.state, qty, self.info.sim_paths if paths is None else paths, self.info.price, self.p, self.info.fixed_costs,
+            continuation=str(g.continuation), charge_beyond_horizon=bool(g.charge_beyond_horizon), cash_floor=self.info.buffer if buffer is None else buffer,
+        )
 
     # ---- allocation rules: budget -> whole units per SKU ----
     def alloc_need(self) -> Callable[[float], np.ndarray]:
@@ -172,6 +176,15 @@ class PlanContext:
         rules = {"need": self.alloc_need, "proportional": self.alloc_proportional, "priority": self.alloc_priority, "marginal": self.alloc_marginal}
         return rules[rule]()
 
+    def _tie_break(self, s: CashPaths, alpha: float) -> tuple:
+        """What decides between budgets with the same P(safe). Larger is better."""
+        rule = str(self.info.cfg.gate.tie_break)
+        if rule == "end_mean":  # most expected cash at the end of the horizon
+            return (float(s.cash[:, -1].mean()),)
+        if rule == "end_tail":  # most cash at the end of the horizon in the bad (alpha) case
+            return (float(np.quantile(s.cash[:, -1], alpha)),)
+        return (float(np.quantile(s.min_cash, alpha)), float(np.quantile(s.cash[:, -1], alpha)))  # min_tail
+
     # ---- budget rules ----
     def gate(self, alloc: Callable[[float], np.ndarray], alpha: float | None = None, buffer: float | None = None, on_infeasible: str | None = None) -> BudgetResult:
         g = self.info.cfg.gate
@@ -182,7 +195,7 @@ class PlanContext:
 
         def sim(B: float) -> CashPaths:
             if B not in sims:
-                sims[B] = self.simulate(alloc(B))
+                sims[B] = self.simulate(alloc(B), buffer=buf)
             return sims[B]
 
         return safe_budget(
@@ -194,8 +207,9 @@ class PlanContext:
             max_iter=int(g.max_bisection_iter),
             n_grid=int(g.n_grid),
             on_infeasible=str(g.on_infeasible if on_infeasible is None else on_infeasible),
-            tail=lambda B: (float(np.quantile(sim(B).min_cash, a)), float(np.quantile(sim(B).cash[:, -1], a))),
+            tail=lambda B: self._tie_break(sim(B), a),
             n_refine=int(g.n_refine),
+            max_prob_tol=float(g.max_prob_tol),
         )
 
 

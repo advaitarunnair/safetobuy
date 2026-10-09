@@ -44,7 +44,7 @@ def _work(job: tuple) -> dict:
 
 def _is_bundle(sc: Scenario, exp) -> bool:
     ab = exp.app_bundle
-    return sc.window.name == ab.window and sc.stress in [float(s) for s in ab.stress_levels] and sc.start_cash_weeks == float(ab.start_cash_weeks) and sc.shortfall_rule == ab.shortfall_rule
+    return sc.window.name == ab.window and sc.stress in [float(s) for s in ab.stress_levels] and sc.cash_cushion == float(ab.cash_cushion) and sc.shortfall_rule == ab.shortfall_rule
 
 
 def _versions() -> dict:
@@ -64,6 +64,7 @@ def main() -> None:
     ap.add_argument("--policies", default=None, help="comma-separated subset of policies")
     ap.add_argument("--jobs", type=int, default=None)
     ap.add_argument("--tag", default=None, help="suffix for the run id")
+    ap.add_argument("--no-latest", action="store_true", help="do not point results/LATEST at this run (comparison slices)")
     args = ap.parse_args()
     cfg, exp = load_all(args)
     panel, params = load_panel_and_params(cfg)
@@ -79,7 +80,7 @@ def main() -> None:
         grid = [s for s in grid if s.window.role == "tune"]
     if args.quick:
         first = next(w for w in resolve_windows(exp, panel.n_obs) if w.role == "tune")
-        grid = [s for s in grid if s.window == first and s.stress == float(exp.default_stress) and s.start_cash_weeks == float(exp.default_start_cash_weeks) and s.shortfall_rule == "overdraft"]
+        grid = [s for s in grid if s.window == first and s.stress == float(exp.default_stress) and s.cash_cushion == float(exp.default_cash_cushion) and s.shortfall_rule == "overdraft"]
         policies = ["A", "B"] if not args.policies else policies
     if not grid:
         raise SystemExit("No scenarios selected.")
@@ -114,7 +115,7 @@ def main() -> None:
     weekly.to_parquet(out / "weekly.parquet", index=False)
     metrics.to_csv(out / "metrics.csv", index=False)
     aggregate(metrics, ["role", "shortfall_rule"]).to_csv(out / "pooled_by_role_rule.csv", index=False)
-    aggregate(metrics, ["role", "shortfall_rule", "stress", "start_cash_weeks"]).to_csv(out / "pooled_by_scenario.csv", index=False)
+    aggregate(metrics, ["role", "shortfall_rule", "stress", "cash_cushion"]).to_csv(out / "pooled_by_scenario.csv", index=False)
     pd.DataFrame([{**r["scenario"].fields(), **asdict(r["cal"])} for r in results]).to_csv(out / "calibration.csv", index=False)
     headlines = headline_set(weekly, exp, int(cfg.seed)) if {"A", "B", "C"} <= set(policies) else {}
     write_json(out / "headline.json", headlines)
@@ -159,7 +160,7 @@ def main() -> None:
         "has_app_bundle": bool(bundle_runs),
     }
     write_json(out / "manifest.json", manifest)
-    if not partial:
+    if not partial and not args.no_latest:
         (results_root() / "LATEST").write_text(run_id + "\n")
 
     print("=" * 78)
@@ -183,8 +184,8 @@ def main() -> None:
     for rule, h in (headlines.get("by_rule") or {}).items():
         if h and rule != str(exp.headline.shortfall_rule):
             print(f"\n[{h['scope']}]:\n  {h['sentence']}")
-    if partial:
-        print("\n(partial run: results/LATEST not updated)")
+    if partial or args.no_latest:
+        print("\n(results/LATEST not updated)")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-SCENARIO_KEYS = ["scenario", "window", "role", "stress", "start_cash_weeks", "shortfall_rule"]
+SCENARIO_KEYS = ["scenario", "window", "role", "stress", "cash_cushion", "shortfall_rule"]
 
 
 def summarise(weekly: pd.DataFrame) -> pd.DataFrame:
@@ -164,7 +164,7 @@ def headline_sentence(h: dict) -> str:
 def headline_scope(df: pd.DataFrame, exp) -> pd.DataFrame:
     """Rows (weekly or per-scenario) that feed the main headline: configured roles and rule,
     the budget-stress sweep at the default opening cash."""
-    return df[df["role"].isin(list(exp.headline.roles)) & (df["shortfall_rule"] == str(exp.headline.shortfall_rule)) & (df["start_cash_weeks"] == float(exp.default_start_cash_weeks))]
+    return df[df["role"].isin(list(exp.headline.roles)) & (df["shortfall_rule"] == str(exp.headline.shortfall_rule)) & (df["cash_cushion"] == float(exp.default_cash_cushion))]
 
 
 def headline_set(weekly: pd.DataFrame, exp, seed: int) -> dict:
@@ -174,7 +174,7 @@ def headline_set(weekly: pd.DataFrame, exp, seed: int) -> dict:
     budget-stress levels at the default opening cash, under exp.headline.shortfall_rule.
     """
     bs = exp.bootstrap
-    base = weekly[weekly["start_cash_weeks"] == float(exp.default_start_cash_weeks)]
+    base = weekly[weekly["cash_cushion"] == float(exp.default_cash_cushion)]
 
     def hl(df: pd.DataFrame, scope: str, proposed: str = "C") -> dict | None:
         if df.empty or not {"A", "B", proposed} <= set(df["policy"].unique()):

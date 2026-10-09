@@ -16,6 +16,11 @@ horizon it needs an assumption about future orders:
       what it sold the week before (one-for-one replenishment), with the usual
       lead times and payment terms. Stock levels, revenue and supplier payments
       then keep flowing through the horizon, so the projection is a cash runway.
+  continuation = "replace_sales_capped": the same, except that a later order is scaled
+      down, path by path, to the cash then available above `cash_floor` (the buffer).
+      A shop that runs this gate every week will not, next week, spend cash it does not
+      have. Without the cap the projection blames this week's order for breaches that
+      next week's gate would simply prevent, and it turned out far too pessimistic.
   continuation = "none": no further purchases. Stock runs out inside the
       horizon, revenue collapses while fixed costs continue, and almost any plan
       looks unsafe. Kept for comparison and tests only.
@@ -66,10 +71,16 @@ def simulate_cash(
     fixed_costs: np.ndarray,
     continuation: str = "replace_sales",
     charge_beyond_horizon: bool = False,
+    cash_floor: float | None = None,
 ) -> CashPaths:
-    """Project cash over H weeks. demand_paths [n_paths, n_skus, H]; fixed_costs [H]."""
-    if continuation not in ("replace_sales", "none"):
+    """Project cash over H weeks. demand_paths [n_paths, n_skus, H]; fixed_costs [H].
+
+    cash_floor is only used by continuation="replace_sales_capped"."""
+    if continuation not in ("replace_sales", "replace_sales_capped", "none"):
         raise ValueError(f"unknown continuation '{continuation}'")
+    capped = continuation == "replace_sales_capped"
+    if capped and cash_floor is None:
+        raise ValueError("continuation='replace_sales_capped' needs cash_floor")
     n_paths, n, H = demand_paths.shape
     plan = np.asarray(plan_qty, dtype=float)
     c = params.unit_cost
@@ -88,7 +99,7 @@ def simulate_cash(
         np.add.at(plan_due, due[inside], (plan * c)[inside])
     pay += plan_due[None, :]
 
-    follow = continuation == "replace_sales"
+    follow = continuation != "none"
     if follow:
         later = np.zeros((n_paths, n, H))  # arrivals from orders placed in later weeks
         groups = [(int(L), int(D), (params.lead_time == L) & (due == D)) for L, D in sorted({(int(a), int(b)) for a, b in zip(params.lead_time, due)})]
@@ -108,12 +119,6 @@ def simulate_cash(
             on_hand += later[:, :, j]
         sales = np.minimum(demand_paths[:, :, j], on_hand)
         on_hand -= sales
-        if follow and j + 1 < H:  # next week's order replaces this week's sales
-            for L, D, mask in groups:
-                if j + 1 + L < H:
-                    later[:, mask, j + 1 + L] += sales[:, mask]
-                if j + 1 + D < H:
-                    pay[:, j + 1 + D] += sales[:, mask] @ c[mask]
         rev = sales @ price
         margin += sales @ unit_margin
         if perish:
@@ -124,4 +129,15 @@ def simulate_cash(
         cash = cash + rev - fixed_costs[j] - pay[:, j]
         revenue += rev
         out[:, j] = cash
+        if follow and j + 1 < H:  # next week's order replaces this week's sales
+            scale = None
+            if capped:  # ... as far as the cash above the floor allows, on each path
+                want = sales @ c
+                scale = np.clip((cash - cash_floor) / np.maximum(want, 1e-9), 0.0, 1.0)
+            for L, D, mask in groups:
+                units = sales[:, mask] if scale is None else sales[:, mask] * scale[:, None]
+                if j + 1 + L < H:
+                    later[:, mask, j + 1 + L] += units
+                if j + 1 + D < H:
+                    pay[:, j + 1 + D] += units @ c[mask]
     return CashPaths(out, out.min(axis=1), margin, revenue, float(plan @ c))

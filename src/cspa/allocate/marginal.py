@@ -32,6 +32,12 @@ Ranking (rank_by):
                 value / (cost + leftover_cost) >= lambda. It only changes the
                 ORDER in which units are funded, never which units are worth
                 buying, so the unconstrained plan is identical.
+  "cash"      : (value - cost of the units expected to be left unsold) / purchase
+                cost: the expected cash profit a dollar returns within the cover
+                period, counting an unsold unit as cash not yet recovered. This is
+                the ranking a cash gate cares about: it puts units that will sell
+                soon first, whatever their margin, and deep safety stock last.
+                Like "committed" it changes the order only.
 """
 from __future__ import annotations
 
@@ -84,7 +90,7 @@ def marginal_values(sorted_cover: np.ndarray, x0: int, n_units: int, cu: float, 
 
 def build_chunks(cover: np.ndarray, position: np.ndarray, unit_cost: np.ndarray, cu: np.ndarray, co: np.ndarray, pack: np.ndarray, moq: np.ndarray, rank_by: str = "cost") -> ChunkTable:
     """Enumerate every positive-value chunk for every SKU and sort by value per dollar (see rank_by)."""
-    if rank_by not in ("cost", "committed"):
+    if rank_by not in ("cost", "committed", "cash"):
         raise ValueError(f"unknown rank_by '{rank_by}'")
     n = cover.shape[1]
     position = np.asarray(np.rint(position), dtype=np.int64)
@@ -123,8 +129,15 @@ def build_chunks(cover: np.ndarray, position: np.ndarray, unit_cost: np.ndarray,
         c_val.append(vals[:n_keep])
         # Sort key: density made exactly non-increasing within the SKU, so floating-point
         # ties (e.g. a 2-unit MOQ chunk vs. the single units after it) can never reorder a SKU's chunks.
-        capital = sizes * float(unit_cost[i]) + (left[:n_keep] * float(unit_cost[i]) if rank_by == "committed" else 0.0)
-        c_key.append(np.minimum.accumulate(vals[:n_keep] / capital))
+        spend = sizes * float(unit_cost[i])
+        unsold = left[:n_keep] * float(unit_cost[i])
+        if rank_by == "committed":
+            score = vals[:n_keep] / (spend + unsold)
+        elif rank_by == "cash":
+            score = (vals[:n_keep] - unsold) / spend
+        else:
+            score = vals[:n_keep] / spend
+        c_key.append(np.minimum.accumulate(score))
         target[i] = int(ends[n_keep - 1])
 
     if c_sku:

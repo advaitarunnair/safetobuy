@@ -58,7 +58,7 @@ def main() -> None:
     cfg, exp = load_all(args)
     panel, _ = load_panel_and_params(cfg)
     rule = args.rule or str(exp.headline.shortfall_rule)
-    scenarios = [s for s in scenario_grid(exp, panel.n_obs) if s.window.role == "tune" and s.shortfall_rule == rule and s.start_cash_weeks == float(exp.default_start_cash_weeks)]
+    scenarios = [s for s in scenario_grid(exp, panel.n_obs) if s.window.role == "tune" and s.shortfall_rule == rule and s.cash_cushion == float(exp.default_cash_cushion)]
     if not scenarios:
         raise SystemExit("No tuning scenarios.")
     keys, values = [], []

@@ -9,14 +9,16 @@ windows:
   - {name: W3, weeks_before_end: 52, n_weeks: 26, role: holdout}
   - {name: W4, weeks_before_end: 26, n_weeks: 26, role: holdout}
 
-# Budget stress s: in the heaviest fixed-cost week of each cycle, expected revenue minus
-# fixed costs covers only s x the ideal weekly replenishment spend.
+# Budget stress s tightens two things at once (see docs/ASSUMPTIONS.md section 6):
+#   - the monthly lump of fixed costs: in a lump week, expected revenue minus fixed costs
+#     covers only s x the ideal weekly replenishment spend R*;
+#   - opening cash: buffer + cash_cushion x s x R*.
 stress_levels: [0.5, 0.7, 0.9]
 default_stress: 0.7
 
-# Opening cash, in weeks of average fixed costs (the buffer default is 2.0 weeks).
-start_cash_weeks: [2.5, 3.0, 4.0]
-default_start_cash_weeks: 3.0
+# Opening free cash above the buffer, as a multiple of (s x R*).
+cash_cushions: [0.2, 0.35, 0.75]
+default_cash_cushion: 0.35
 
 shortfall_rules: [overdraft, cut_proportional]
 
@@ -34,7 +36,7 @@ bootstrap:
 app_bundle:
   window: W4
   stress_levels: [0.5, 0.7, 0.9]
-  start_cash_weeks: 3.0
+  cash_cushion: 0.35
   shortfall_rule: overdraft
 
 n_jobs: 6

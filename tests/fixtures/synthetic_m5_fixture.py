@@ -118,9 +118,9 @@ TEST_EXP_OVERRIDES = {
     ],
     "stress_levels": [0.5, 0.9],
     "default_stress": 0.5,
-    "start_cash_weeks": [2.0],
-    "default_start_cash_weeks": 2.0,
+    "cash_cushions": [0.5],
+    "default_cash_cushion": 0.5,
     "bootstrap": {"n_boot": 50, "block_weeks": 2, "ci": 0.9},
-    "app_bundle": {"window": "W2", "stress_levels": [0.5], "start_cash_weeks": 2.0, "shortfall_rule": "overdraft"},
+    "app_bundle": {"window": "W2", "stress_levels": [0.5], "cash_cushion": 0.5, "shortfall_rule": "overdraft"},
     "n_jobs": 1,
 }

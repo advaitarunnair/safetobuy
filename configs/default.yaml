@@ -88,7 +88,7 @@ risk:
 gate:
   mode: mc                    # mc | deterministic (p10 demand path)
   deterministic_quantile: 0.10
-  continuation: replace_sales # replace_sales | none (see cash/simulate.py and ASSUMPTIONS)
+  continuation: replace_sales_capped  # replace_sales_capped | replace_sales | none (see cash/simulate.py, ASSUMPTIONS 5.3)
   charge_beyond_horizon: false # true: allow terms that reach past the horizon and count those bills in its last week
   tol_frac: 0.005
   tol_abs: 20.0
@@ -96,10 +96,12 @@ gate:
   n_grid: 8
   on_infeasible: max_prob     # no budget is safe -> the budget that maximises P(safe). zero = original spec
   n_refine: 6                 # extra budgets tried around the best one in that case
+  max_prob_tol: 0.05          # probabilities within this of the best count as tied
+  tie_break: end_mean         # among tied budgets: end_mean | end_tail | min_tail (see policies/base.py)
 
 allocator:
   perishable_overage: spoilage   # spoilage: rate*(c-salvage)+holding | full_loss: c-salvage+holding
-  rank_by: cost                  # cost: value per purchase dollar (brief) | committed: per dollar incl. expected unsold cost
+  rank_by: cost                  # order of funding: cost (brief) | committed | cash (see allocate/marginal.py)
 
 policies:
   reorder_point:

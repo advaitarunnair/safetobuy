@@ -166,7 +166,9 @@ _RULES: dict[str, Any] = {
     "risk.buffer_weeks_of_fixed_costs": _num(0, 52),
     "gate.mode": _choice("mc", "deterministic"),
     "gate.deterministic_quantile": _choice(*QUANTILES),
-    "gate.continuation": _choice("replace_sales", "none"),
+    "gate.continuation": _choice("replace_sales", "replace_sales_capped", "none"),
+    "gate.max_prob_tol": _num(0, 1),
+    "gate.tie_break": _choice("min_tail", "end_tail", "end_mean"),
     "gate.charge_beyond_horizon": _choice(True, False),
     "gate.tol_frac": _num(0, 0.5, lo_open=True),
     "gate.tol_abs": _num(0, None),
@@ -175,7 +177,7 @@ _RULES: dict[str, Any] = {
     "gate.on_infeasible": _choice("max_prob", "zero"),
     "gate.n_refine": _num(0, 200, integer=True),
     "allocator.perishable_overage": _choice("spoilage", "full_loss"),
-    "allocator.rank_by": _choice("cost", "committed"),
+    "allocator.rank_by": _choice("cost", "committed", "cash"),
     "policies.reorder_point.z": _num(0, 6),
     "policies.otb.target_weeks_cover": lambda v: None if v == "auto" else _num(0, 26)(v),
     "policies.otb.planned_markdowns": _num(0, None),
@@ -270,7 +272,7 @@ def validate_experiments(exp: dict) -> None:
                 errors.append(f"windows[{w['name']}].role: must be tune or holdout")
             if not isinstance(w["n_weeks"], int) or w["n_weeks"] < 1 or not isinstance(w["weeks_before_end"], int) or w["n_weeks"] > w["weeks_before_end"]:
                 errors.append(f"windows[{w['name']}]: need integer 1 <= n_weeks <= weeks_before_end")
-    for key in ("stress_levels", "start_cash_weeks"):
+    for key in ("stress_levels", "cash_cushions"):
         v = exp.get(key)
         if not isinstance(v, list) or not v or any(not isinstance(x, (int, float)) for x in v):
             errors.append(f"{key}: must be a non-empty list of numbers")
@@ -278,8 +280,8 @@ def validate_experiments(exp: dict) -> None:
         errors.append("stress_levels: each must be in (0, 1]")
     if exp.get("default_stress") not in (exp.get("stress_levels") or []):
         errors.append("default_stress: must be one of stress_levels")
-    if exp.get("default_start_cash_weeks") not in (exp.get("start_cash_weeks") or []):
-        errors.append("default_start_cash_weeks: must be one of start_cash_weeks")
+    if exp.get("default_cash_cushion") not in (exp.get("cash_cushions") or []):
+        errors.append("default_cash_cushion: must be one of cash_cushions")
     rules = exp.get("shortfall_rules")
     if not isinstance(rules, list) or not rules or any(r not in ("overdraft", "cut_proportional") for r in rules):
         errors.append("shortfall_rules: must be a non-empty subset of [overdraft, cut_proportional]")
