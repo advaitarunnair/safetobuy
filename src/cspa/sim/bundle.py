@@ -32,7 +32,7 @@ def write_bundle(out_dir: Path, panel: Panel, params: SkuParams, cache: Forecast
     last_week = max(c["week"] for r in runs for c in r["captured"])
     lo_cut = max(int(cache.cutoffs[0]), first_week - 1 - H - int(cfg.sampling.bank_weeks))
     keep = cache.cutoffs[(cache.cutoffs >= lo_cut) & (cache.cutoffs <= last_week - 1)]
-    cache.subset(keep).save(out_dir / "forecasts.parquet")
+    cache.subset(keep).save(out_dir / "forecasts.parquet", include_raw=False)
 
     trimmed = panel.copy()
     lo_hist = max(0, lo_cut - HISTORY_WEEKS)

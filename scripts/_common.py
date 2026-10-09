@@ -51,7 +51,7 @@ def git_info() -> dict:
             return None
 
     commit = run("rev-parse", "HEAD")
-    status = run("status", "--porcelain")
+    status = run("status", "--porcelain", "--untracked-files=no")  # tracked files only: a run always creates new files
     return {"commit": commit, "dirty": bool(status) if status is not None else None}
 
 

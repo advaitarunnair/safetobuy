@@ -49,7 +49,7 @@ class ForecastCache:
         ii = np.array([self.idx(int(c)) for c in cutoffs])
         return ForecastCache(self.name, list(self.skus), self.cutoffs[ii], self.raw[ii], self.cal[ii], self.calibrated[ii], dict(self.meta))
 
-    def to_long(self) -> pd.DataFrame:
+    def to_long(self, include_raw: bool = True) -> pd.DataFrame:
         C, n, H, Q = self.raw.shape
         df = pd.DataFrame(
             {
@@ -61,13 +61,15 @@ class ForecastCache:
         )
         for j, col in enumerate(QCOLS):
             df[col] = self.cal[..., j].ravel()
-        for j, col in enumerate(QCOLS):
-            df[f"raw_{col}"] = self.raw[..., j].ravel()
+        if include_raw:
+            for j, col in enumerate(QCOLS):
+                df[f"raw_{col}"] = self.raw[..., j].ravel()
         return df
 
-    def save(self, path: Path) -> None:
+    def save(self, path: Path, include_raw: bool = True) -> None:
+        """include_raw=False drops the uncalibrated quantiles (the app bundle does not need them)."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        self.to_long().to_parquet(path, index=False)
+        self.to_long(include_raw).to_parquet(path, index=False)
         path.with_suffix(".meta.json").write_text(json.dumps({"name": self.name, "skus": self.skus, **self.meta}, indent=2, default=str))
 
     @classmethod
@@ -82,7 +84,7 @@ class ForecastCache:
         C, n = len(cutoffs), len(skus)
         shape = (C, n, H, len(QCOLS))
         cal = df[list(QCOLS)].to_numpy(float).reshape(shape)
-        raw = df[[f"raw_{c}" for c in QCOLS]].to_numpy(float).reshape(shape)
+        raw = df[[f"raw_{c}" for c in QCOLS]].to_numpy(float).reshape(shape) if f"raw_{QCOLS[0]}" in df.columns else cal.copy()
         calibrated = df["calibrated"].to_numpy(bool).reshape(C, n * H)[:, 0]
         return cls(name, skus, cutoffs.astype(np.int64), raw, cal, calibrated, meta)
 
