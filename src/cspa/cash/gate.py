@@ -54,21 +54,28 @@ def safe_budget(
     tol_abs: float = 20.0,
     max_iter: int = 12,
     n_grid: int = 8,
-    on_infeasible: str = "zero",
-    tail: Callable[[float], float] | None = None,
+    on_infeasible: str = "max_prob",
+    tail: Callable[[float], tuple] | None = None,
+    n_refine: int = 6,
 ) -> BudgetResult:
     """Search [0, B_max] for the largest feasible budget.
 
     evaluate(B) must return P(min cash >= buffer) for the plan the allocator
     produces at budget B. B_max is the cost of the unconstrained plan.
 
-    on_infeasible decides what happens when no budget meets the target, B = 0 included:
-      "zero"        : return B = 0 with the flag "cash at risk regardless of purchasing"
-                      (the behaviour specified for the gate).
-      "best_effort" : same flag, but return the candidate budget that gets closest to
-                      safety: highest P(safe | B); ties broken by the highest
-                      alpha-quantile of end-of-horizon cash, tail(B), then by larger B.
-                      Needs `tail`.
+    on_infeasible decides what happens when no budget meets the target, B = 0 included.
+    The result is always flagged "cash at risk regardless of purchasing".
+      "max_prob" : return the budget that maximises P(min cash >= buffer | B) on the same
+                   demand paths. Zero is not automatically the safest choice: stock that
+                   sells quickly brings in more cash than it costs. The search evaluates
+                   B = 0, the coarse grid and B_max, then `n_refine` more points around
+                   the best one. Ties (common when every budget has probability 0) are
+                   broken by tail(B), a tuple compared lexicographically (the policy
+                   passes the alpha-quantile of minimum cash, then of end-of-horizon
+                   cash), and finally by the larger B.
+      "zero"     : return B = 0. This was the original specification; in a closed loop
+                   it can spiral (no purchases, no sales, no cash) and is kept only for
+                   comparison.
     """
     target = 1.0 - alpha
     seen: dict[float, float] = {}
@@ -135,10 +142,20 @@ def safe_budget(
 
     if best is None:
         best = 0.0
-        if on_infeasible == "best_effort":
-            if tail is None:
-                raise ValueError("on_infeasible='best_effort' needs a tail(B) function")
-            cands = [0.0] + [float(g) for g in grid] + [B_max]
-            best = max(cands, key=lambda B: (round(ev(B), 9), round(float(tail(B)), 6), B))
+        if on_infeasible == "max_prob":
+
+            def key(B: float) -> tuple:
+                tie = tuple(round(float(x), 6) for x in tail(B)) if tail is not None else ()
+                return (round(ev(B), 9), tie, B)
+
+            cands = sorted({0.0, *[float(g) for g in grid], B_max})
+            best = max(cands, key=key)
+            if n_refine > 0:  # look between the best candidate's neighbours
+                i = cands.index(best)
+                lo, hi = cands[max(i - 1, 0)], cands[min(i + 1, len(cands) - 1)]
+                finer = [float(x) for x in np.linspace(lo, hi, n_refine + 2)[1:-1]]
+                best = max([best, *finer], key=key)
+        elif on_infeasible != "zero":
+            raise ValueError(f"unknown on_infeasible '{on_infeasible}'")
         return result(best, STATUS_AT_RISK, violations)
     return result(best, STATUS_CONSTRAINED, violations)

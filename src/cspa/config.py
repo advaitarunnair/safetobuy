@@ -15,7 +15,7 @@ DEFAULT_EXPERIMENTS = ROOT / "configs" / "experiments.yaml"
 
 QUANTILES = (0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95)
 QCOLS = tuple(f"q{int(round(q * 100)):02d}" for q in QUANTILES)
-POLICY_NAMES = ("A", "B", "C", "D", "C_gate_prop", "OTB_marginal", "C_plus")
+POLICY_NAMES = ("A", "B", "C", "D", "C_gate_prop", "OTB_marginal")
 
 
 class ConfigError(ValueError):
@@ -172,8 +172,10 @@ _RULES: dict[str, Any] = {
     "gate.tol_abs": _num(0, None),
     "gate.max_bisection_iter": _num(1, 60, integer=True),
     "gate.n_grid": _num(2, 200, integer=True),
-    "gate.on_infeasible": _choice("zero", "best_effort"),
+    "gate.on_infeasible": _choice("max_prob", "zero"),
+    "gate.n_refine": _num(0, 200, integer=True),
     "allocator.perishable_overage": _choice("spoilage", "full_loss"),
+    "allocator.rank_by": _choice("cost", "committed"),
     "policies.reorder_point.z": _num(0, 6),
     "policies.otb.target_weeks_cover": lambda v: None if v == "auto" else _num(0, 26)(v),
     "policies.otb.planned_markdowns": _num(0, None),
@@ -295,19 +297,28 @@ def validate_experiments(exp: dict) -> None:
     ab = exp.get("app_bundle", {})
     if isinstance(wins, list) and ab.get("window") not in [w.get("name") for w in wins if isinstance(w, dict)]:
         errors.append("app_bundle.window: must name one of the windows")
-    if ab.get("policy", "C") not in ("C", "C_plus") or (isinstance(pols, list) and ab.get("policy", "C") not in pols):
-        errors.append("app_bundle.policy: must be C or C_plus, and be one of the policies being run")
     if not isinstance(exp.get("n_jobs"), int) or exp["n_jobs"] < 1:
         errors.append("n_jobs: must be an integer >= 1")
     if errors:
         raise ConfigError("Invalid experiments config:\n  - " + "\n  - ".join(errors))
 
 
-def load_config(path: str | Path | None = None, overrides: dict | None = None) -> Config:
-    path = Path(path) if path else DEFAULT_CONFIG
+def _read_yaml(path: Path, depth: int = 0) -> dict:
+    """Read a YAML file. `extends: other.yaml` (relative to the file) is loaded first and overridden."""
     if not path.exists():
         raise ConfigError(f"Config file not found: {path}")
+    if depth > 5:
+        raise ConfigError(f"Config 'extends' chain is too deep at {path}")
     raw = yaml.safe_load(path.read_text()) or {}
+    parent = raw.pop("extends", None)
+    if parent:
+        raw = deep_merge(_read_yaml((path.parent / str(parent)).resolve(), depth + 1), raw)
+    return raw
+
+
+def load_config(path: str | Path | None = None, overrides: dict | None = None) -> Config:
+    path = Path(path) if path else DEFAULT_CONFIG
+    raw = _read_yaml(path)
     if overrides:
         raw = deep_merge(raw, overrides)
     validate_config(raw)
@@ -316,9 +327,7 @@ def load_config(path: str | Path | None = None, overrides: dict | None = None) -
 
 def load_experiments(path: str | Path | None = None, overrides: dict | None = None) -> Config:
     path = Path(path) if path else DEFAULT_EXPERIMENTS
-    if not path.exists():
-        raise ConfigError(f"Experiments file not found: {path}")
-    raw = yaml.safe_load(path.read_text()) or {}
+    raw = _read_yaml(path)
     if overrides:
         raw = deep_merge(raw, overrides)
     validate_experiments(raw)

@@ -94,10 +94,12 @@ gate:
   tol_abs: 20.0
   max_bisection_iter: 12
   n_grid: 8
-  on_infeasible: zero         # zero (DECIDED default) | best_effort (see ASSUMPTIONS)
+  on_infeasible: max_prob     # no budget is safe -> the budget that maximises P(safe). zero = original spec
+  n_refine: 6                 # extra budgets tried around the best one in that case
 
 allocator:
   perishable_overage: spoilage   # spoilage: rate*(c-salvage)+holding | full_loss: c-salvage+holding
+  rank_by: cost                  # cost: value per purchase dollar (brief) | committed: per dollar incl. expected unsold cost
 
 policies:
   reorder_point:
@@ -111,9 +113,9 @@ world:
 
 llm:
   enabled: true               # only used when ANTHROPIC_API_KEY is set; otherwise templates
-  model: claude-opus-5-5
+  model: claude-haiku-5-5
   effort: low                 # the task is rewording supplied numbers, nothing more
   max_tokens: 16000
-  refusal_fallback: true      # server-side fallback if the model declines
+  refusal_fallback: false     # server-side refusal fallback is not offered for Haiku; a refusal falls back to templates
   max_skus_per_call: 40
   cache_dir: data/processed/llm_cache

@@ -24,13 +24,12 @@ from cspa.config import as_config
 from cspa.sim.metrics import aggregate, headline_scope
 
 TARGETS = ["README.md", "docs/project_description.md", "docs/demo_script.md"]
-POLICY_ORDER = ["A", "B", "D", "C", "C_plus", "C_gate_prop", "OTB_marginal"]
+POLICY_ORDER = ["A", "B", "D", "C", "C_gate_prop", "OTB_marginal"]
 POLICY_NAME = {
     "A": "A: reorder point",
     "B": "B: open-to-buy, proportional split",
     "D": "D: open-to-buy, priority cuts",
     "C": "**C: cash gate + marginal allocator (proposed)**",
-    "C_plus": "C+: C with capital-aware ranking and best-effort fallback",
     "C_gate_prop": "ablation: cash gate + proportional split",
     "OTB_marginal": "ablation: OTB budget + marginal allocator",
 }
@@ -132,9 +131,6 @@ def c_vs_b_block(hl: dict, exp) -> str:
             f"- **{label}:** C's gross margin was {abs(y):.1f}% {verdict} than B's ({usd(gm['C'])} vs {usd(gm['B'])}; {h['ci_level']:.0%} interval {ci_txt(h, 'y_ci')}; {clear}). "
             f"Shortfall weeks: C {sf['C']}, B {sf['B']}, A {sf['A']}. Insolvency weeks: C {h['insolvency_weeks']['C']}, B {h['insolvency_weeks']['B']}, A {h['insolvency_weeks']['A']}."
         )
-    v = hl.get("variant_C_plus")
-    if v:
-        lines.append(f"- **C+ instead of C (same scope as the headline):** margin {v['y_pct_margin_vs_B']:+.1f}% vs B, shortfall weeks C+ {v['shortfall_weeks']['C']}, B {v['shortfall_weeks']['B']}, A {v['shortfall_weeks']['A']}.")
     return "\n".join(lines) if lines else PENDING
 
 
@@ -196,9 +192,9 @@ def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
     for s, g in aggregate(scope, ["stress"]).groupby("stress"):
         g = g.set_index("policy")
         row = {"Budget stress": f"{int(round(s * 100))}%"}
-        for p in [p for p in ("A", "B", "D", "C", "C_plus") if p in g.index]:
+        for p in [p for p in ("A", "B", "D", "C") if p in g.index]:
             row[f"{p} shortfall wks"] = int(g.loc[p].shortfall_weeks)
-        for p in [p for p in ("A", "B", "D", "C", "C_plus") if p in g.index]:
+        for p in [p for p in ("A", "B", "D", "C") if p in g.index]:
             row[f"{p} margin"] = usd(g.loc[p].gross_margin)
         parts.append(row)
     blocks["stress_table"] = md_table(pd.DataFrame(parts)) if parts else PENDING
@@ -208,9 +204,9 @@ def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
     for c, g in aggregate(cash_scope, ["start_cash_weeks"]).groupby("start_cash_weeks"):
         g = g.set_index("policy")
         row = {"Opening cash (weeks of fixed costs)": f"{c:g}"}
-        for p in [p for p in ("A", "B", "C", "C_plus") if p in g.index]:
+        for p in [p for p in ("A", "B", "D", "C") if p in g.index]:
             row[f"{p} shortfall wks"] = int(g.loc[p].shortfall_weeks)
-        for p in [p for p in ("A", "B", "C", "C_plus") if p in g.index]:
+        for p in [p for p in ("A", "B", "D", "C") if p in g.index]:
             row[f"{p} margin"] = usd(g.loc[p].gross_margin)
         cash_rows.append(row)
     blocks["start_cash_table"] = md_table(pd.DataFrame(cash_rows)) if cash_rows else PENDING
@@ -220,7 +216,6 @@ def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
     named += [(f"{role} windows (used for tuning), rule {exp.headline.shortfall_rule}", h) for role, h in (hl.get("other_roles") or {}).items()]
     named += [(f"Window {w} only", h) for w, h in (hl.get("by_window") or {}).items()]
     named += [(f"Stress {int(round(float(s) * 100))}% only", h) for s, h in (hl.get("by_stress") or {}).items()]
-    named += [("C replaced by the C+ variant", hl.get("variant_C_plus"))]
     blocks["robustness_table"] = headline_rows(named)
 
     fe = run / "forecast_eval.csv"

@@ -30,8 +30,8 @@ def default_buffer(cal: WorldCal) -> float:
 
 
 def default_fallback(b: Bundle) -> str:
-    """What the bundled policy does when no budget is safe."""
-    return str(REGISTRY[b.policy].on_infeasible or b.cfg.gate.on_infeasible)
+    """What policy C does when no budget is safe (gate.on_infeasible in the run's config)."""
+    return str(b.cfg.gate.on_infeasible)
 
 
 def compute_week_plan(b: Bundle, sid: str, week: int, alpha: float, buffer: float, n_paths: int, fallback: str, use_llm: bool = False) -> dict:
@@ -42,9 +42,8 @@ def compute_week_plan(b: Bundle, sid: str, week: int, alpha: float, buffer: floa
     sched = cal.schedule(week, H)
     info = make_info(b.panel, b.cache, p, cfg, week, sched, buffer, alpha, n_paths)
     ctx = PlanContext(state, info)
-    alloc_rule = REGISTRY[b.policy].alloc_rule
-    alloc = ctx.allocator(alloc_rule)
-    table = ctx.table_committed if alloc_rule == "marginal_committed" else ctx.table
+    alloc = ctx.allocator(REGISTRY[b.policy].alloc_rule)
+    table = ctx.table
     gate = ctx.gate(alloc, alpha=alpha, buffer=buffer, on_infeasible=fallback)
     qty = alloc(gate.B)
     report = plan_report(p.skus, qty, table, info.cover, info.cover_weeks)

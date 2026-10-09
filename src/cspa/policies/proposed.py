@@ -4,6 +4,7 @@ from cspa.policies.base import Policy
 
 class ProposedPolicy(Policy):
     """1. Cash gate: the largest budget B with P(min cash >= buffer) >= 1 - alpha.
+       If no budget meets that, the budget that maximises P(min cash >= buffer), flagged.
     2. Allocator: spend B where expected profit per dollar is highest."""
 
     name = "C"
@@ -22,21 +23,3 @@ class GateProportionalPolicy(Policy):
     alloc_rule = "proportional"
 
 
-class ProposedPlusPolicy(Policy):
-    """C+ : policy C with two changes, both found while verifying the specified design.
-
-    1. Ranking. Units are funded by expected profit per dollar of capital committed
-       (purchase cost plus the cost of units expected to be left unsold), instead of per
-       dollar of purchase cost alone. Under a binding budget the specified ranking funds
-       high-margin units that may well not sell ahead of low-margin units that surely will.
-    2. Fallback. When no budget is safe, C buys nothing. C+ buys the plan that gets
-       closest to safety (see cash/gate.py, "best_effort").
-
-    C+ is reported next to C, never in place of it.
-    """
-
-    name = "C_plus"
-    label = "C+ (capital-aware ranking, best-effort fallback)"
-    budget_rule = "gate"
-    alloc_rule = "marginal_committed"
-    on_infeasible = "best_effort"

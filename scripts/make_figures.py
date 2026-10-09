@@ -21,13 +21,12 @@ from cspa.sim.metrics import aggregate, headline_scope  # noqa: E402
 
 # Categorical colours are bound to the entity (policy / model), never to its rank.
 SURFACE, INK, INK2, MUTED, GRID, AXIS = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
-POLICY_COLOR = {"A": "#2a78d6", "B": "#eb6834", "C": "#1baf7a", "D": "#eda100", "C_plus": "#e87ba4", "C_gate_prop": "#008300", "OTB_marginal": "#4a3aa7"}
+POLICY_COLOR = {"A": "#2a78d6", "B": "#eb6834", "C": "#1baf7a", "D": "#eda100", "C_gate_prop": "#008300", "OTB_marginal": "#4a3aa7"}
 POLICY_LABEL = {
     "A": "A reorder point",
     "B": "B open-to-buy",
     "C": "C cash gate + allocator",
     "D": "D OTB + priority cuts",
-    "C_plus": "C+ capital-aware, best effort",
     "C_gate_prop": "gate + proportional split",
     "OTB_marginal": "OTB + allocator",
 }
@@ -136,7 +135,7 @@ def fig_backtest(run, manifest, exp) -> list[str]:
         return []
     made = []
     pols = [p for p in POLICY_COLOR if p in set(scope["policy"])]
-    core = [p for p in ("A", "B", "D", "C", "C_plus") if p in pols]
+    core = [p for p in ("A", "B", "D", "C") if p in pols]
     by = aggregate(scope, ["stress"])
     scope_txt = f"{'+'.join(exp.headline.roles)} windows, opening cash {exp.default_start_cash_weeks:g} wks of fixed costs, rule: {exp.headline.shortfall_rule}."
 

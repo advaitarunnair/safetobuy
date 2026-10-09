@@ -74,7 +74,7 @@ class Bundle:
 
     @property
     def policy(self) -> str:
-        """The policy whose week-by-week states this bundle holds (C or C_plus)."""
+        """The policy whose week-by-week states this bundle holds."""
         return str(self.meta.get("policy", "C"))
 
     def scenario(self, sid: str) -> dict:

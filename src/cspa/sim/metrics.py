@@ -195,7 +195,6 @@ def headline_set(weekly: pd.DataFrame, exp, seed: int) -> dict:
         "by_stress": {f"{s:g}": hl(main[main["stress"] == s], f"{role_txt} windows, stress {s:g}, {main_rule}") for s in sorted(main["stress"].unique())},
         "by_window": {str(w): hl(main[main["window"] == w], f"window {w}, stress sweep, {main_rule}") for w in sorted(main["window"].unique())},
         "other_roles": {},
-        "variant_C_plus": hl(main, f"{role_txt} windows, stress sweep, {main_rule}; C replaced by C_plus", "C_plus"),
     }
     for role in sorted(set(base["role"].unique()) - set(roles)):
         sub = base[(base["role"] == role) & (base["shortfall_rule"] == main_rule)]

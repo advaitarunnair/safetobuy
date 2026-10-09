@@ -20,7 +20,7 @@ default_start_cash_weeks: 3.0
 
 shortfall_rules: [overdraft, cut_proportional]
 
-policies: [A, B, C, D, C_plus, C_gate_prop, OTB_marginal]
+policies: [A, B, C, D, C_gate_prop, OTB_marginal]
 
 headline:
   roles: [holdout]            # which windows feed the headline sentence
@@ -32,7 +32,6 @@ bootstrap:
   ci: 0.90
 
 app_bundle:
-  policy: C                   # C (as specified) or C_plus: whose weekly states the app replays
   window: W4
   stress_levels: [0.5, 0.7, 0.9]
   start_cash_weeks: 3.0

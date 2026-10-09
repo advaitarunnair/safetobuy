@@ -1,0 +1,7 @@
+# Comparison slice: same store, slower-moving department. Everything else as in default.yaml.
+# Usage: make data forecast tune backtest CONFIG=configs/household_1.yaml
+extends: default.yaml
+
+data:
+  dept_id: HOUSEHOLD_1
+  processed_dir: data/processed_household_1

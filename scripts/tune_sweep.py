@@ -5,7 +5,7 @@ then record what you changed and why in docs/ASSUMPTIONS.md section 8.
 
 Usage:
   python scripts/tune_sweep.py --set risk.alpha=0.05,0.10 --set synthetic.capital_rate_annual=0.15,1.0
-  python scripts/tune_sweep.py --set risk.buffer_weeks_of_fixed_costs=1,2 --policies A,B,C,C_plus
+  python scripts/tune_sweep.py --set risk.buffer_weeks_of_fixed_costs=1,2 --policies A,B,C,D
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def _work(job: tuple) -> pd.DataFrame:
 def main() -> None:
     ap = base_parser(__doc__)
     ap.add_argument("--set", action="append", default=[], metavar="KEY=V1,V2", help="config key and the values to try (repeatable)")
-    ap.add_argument("--policies", default="A,B,C,C_plus")
+    ap.add_argument("--policies", default="A,B,C")
     ap.add_argument("--rule", default=None, help="shortfall rule (default: the headline rule)")
     ap.add_argument("--jobs", type=int, default=None)
     args = ap.parse_args()

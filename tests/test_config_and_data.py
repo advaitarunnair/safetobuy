@@ -102,3 +102,18 @@ def test_selected_skus_come_from_the_selection_window(panel, cfg, overrides, exp
     """final_year mode selects on the last weeks instead (and is the documented alternative)."""
     alt = load_slice(load_config(overrides=deep_merge(overrides, {"data": {"selection": {"mode": "final_year"}}})), None)
     assert alt.meta["selection_window_weeks"] == [277 - 52, 276]
+
+
+def test_config_can_extend_another_file(tmp_path):
+    base = tmp_path / "base.yaml"
+    base.write_text((load_config.__globals__["DEFAULT_CONFIG"]).read_text())
+    child = tmp_path / "child.yaml"
+    child.write_text("extends: base.yaml\ndata:\n  dept_id: HOUSEHOLD_1\n")
+    cfg = load_config(child)
+    assert cfg.data.dept_id == "HOUSEHOLD_1" and cfg.data.store_id == "CA_1" and "extends" not in cfg
+    assert load_config("configs/household_1.yaml").data.processed_dir == "data/processed_household_1"
+    (tmp_path / "loop.yaml").write_text("extends: loop.yaml\n")
+    with pytest.raises(ConfigError):
+        load_config(tmp_path / "loop.yaml")
+    with pytest.raises(ConfigError):
+        load_config(tmp_path / "missing.yaml")

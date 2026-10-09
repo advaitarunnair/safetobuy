@@ -87,7 +87,7 @@ def main() -> None:
     chash = config_hash(cfg, exp)
     run_id = dt.datetime.now().strftime("%Y%m%d-%H%M%S") + f"_{chash[:8]}" + (f"_{args.tag}" if args.tag else ("_tune" if args.tune_only else "_quick" if args.quick else ""))
     out = results_root() / run_id
-    bundle_policy = str(exp.app_bundle.get("policy", "C"))
+    bundle_policy = "C"
     jobs = [(s, policies, bundle_policy if (not partial) and bundle_policy in policies and _is_bundle(s, exp) else None) for s in grid]
     n_jobs = max(1, min(int(args.jobs or exp.n_jobs), len(jobs)))
     print(f"run {run_id}: {len(jobs)} scenarios x {len(policies)} policies, forecaster '{model}', {n_jobs} worker(s)")
@@ -183,9 +183,6 @@ def main() -> None:
     for rule, h in (headlines.get("by_rule") or {}).items():
         if h and rule != str(exp.headline.shortfall_rule):
             print(f"\n[{h['scope']}]:\n  {h['sentence']}")
-    h = headlines.get("variant_C_plus")
-    if h:
-        print(f"\n[{h['scope']}]:\n  {h['sentence']}")
     if partial:
         print("\n(partial run: results/LATEST not updated)")
 

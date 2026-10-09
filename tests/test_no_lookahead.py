@@ -148,6 +148,6 @@ def test_every_policy_decision_is_byte_identical(policy, panel, variants, params
         assert base.qty.tobytes() == other.qty.tobytes()
         assert base_info.q.tobytes() == info.q.tobytes()
         assert base_info.price.tobytes() == info.price.tobytes()
-        if policy in ("C", "C_plus", "C_gate_prop", "OTB_marginal", "D"):
+        if policy in ("C", "C_gate_prop", "OTB_marginal", "D"):
             assert base_info.demand_paths.tobytes() == info.demand_paths.tobytes()
     assert base.qty.sum() > 0 or policy in ("C", "C_gate_prop")

@@ -164,7 +164,7 @@ def test_headline_set_scopes(result, exp):
     wk = result["weekly"].assign(start_cash_weeks=float(exp.default_start_cash_weeks))
     hs = headline_set(wk, exp, 1)
     assert hs["main"]["n_scenarios"] == 1 and "holdout" in hs["main"]["scope"]
-    assert hs["variant_C_plus"] is not None and set(hs["by_rule"]) == {"overdraft"}
+    assert set(hs["by_rule"]) == {"overdraft"} and set(hs["by_stress"]) == {"0.5"}
 
 
 def test_app_bundle_reproduces_the_backtest_decision(result, panel, params, cache, cfg, scenario, tmp_path):
@@ -185,16 +185,15 @@ def test_app_bundle_reproduces_the_backtest_decision(result, panel, params, cach
     assert size < 5_000_000
 
 
-def test_app_bundle_can_replay_c_plus(panel, params, cache, cfg, scenario, tmp_path):
+def test_week_plan_from_the_bundle_matches_the_backtest(result, panel, params, cache, cfg, scenario, tmp_path):
     from cspa.sim.weekplan import compute_week_plan, default_buffer, default_fallback
 
-    res = run_scenario(panel, params, cache, cfg, scenario, ["A", "B", "C_plus"], capture_policy="C_plus")
-    write_bundle(tmp_path / "app", panel, params, cache, cfg, [res], "test_run", "C_plus")
+    write_bundle(tmp_path / "app", panel, params, cache, cfg, [result], "test_run")
     b = load_bundle(tmp_path / "app")
-    assert b.policy == "C_plus" and default_fallback(b) == "best_effort"
+    assert b.policy == "C" and default_fallback(b) == "max_prob"
     week = scenario.window.start + 2
     plan = compute_week_plan(b, scenario.id, week, float(cfg.risk.alpha), b.cal(scenario.id).buffer, int(cfg.sampling.n_paths_backtest), default_fallback(b))
-    row = res["weekly"][(res["weekly"]["policy"] == "C_plus") & (res["weekly"]["week"] == week)].iloc[0]
+    row = result["weekly"][(result["weekly"]["policy"] == "C") & (result["weekly"]["week"] == week)].iloc[0]
     assert float(plan["report"]["spend"].sum()) == pytest.approx(row["order_cost_requested"])
     assert default_buffer(b.cal(scenario.id)) > 0 and set(plan["compare"]["plan"]) == {"C", "Nothing", "Everything", "A", "B", "D"}
 

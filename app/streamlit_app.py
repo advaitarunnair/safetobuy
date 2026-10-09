@@ -157,7 +157,7 @@ def page_plan(run: Path, manifest: dict) -> None:
     buffer = st.sidebar.slider("Cash buffer ($)", 0.0, float(round(3 * cal.buffer / step) * step), default_buffer(cal), step=step, format="$%d", help=f"Default = {cfg.risk.buffer_weeks_of_fixed_costs:g} weeks of average fixed costs.")
     with st.sidebar.expander("Advanced"):
         n_paths = st.select_slider("Monte Carlo demand paths", options=[250, 500, 1000, 2000, 4000], value=int(cfg.sampling.n_paths_app) if int(cfg.sampling.n_paths_app) in (250, 500, 1000, 2000, 4000) else 2000)
-        fb = st.radio("If no budget is safe", ["zero", "best_effort"], index=0 if default_fallback(b) == "zero" else 1, format_func={"zero": "Buy nothing and flag it (policy C, as specified)", "best_effort": "Best-effort plan (policy C+)"}.get)
+        fb = st.radio("If no budget is safe", ["max_prob", "zero"], index=0 if default_fallback(b) == "max_prob" else 1, format_func={"max_prob": "Get as close to safe as possible (default)", "zero": "Buy nothing (original specification)"}.get)
         use_llm = st.checkbox("AI-worded explanations", value=False, disabled=not llm_available(), help="Needs ANTHROPIC_API_KEY. Every number in the AI text is checked against the computed facts; lines that fail fall back to the template.")
         if not llm_available():
             st.caption("No API key found: explanations use the deterministic templates.")
@@ -169,8 +169,6 @@ def page_plan(run: Path, manifest: dict) -> None:
 
     st.title(PROJECT_NAME)
     st.caption("Open-to-buy gives you a budget. We tell you whether you can afford it, and how to spend it best.")
-    if b.policy == "C_plus":
-        POLICY_LABEL["C"] = "C+: cash gate + allocator (this plan)"
     data_banner(manifest, cfg)
 
     # ---- 2. safe budget ----
@@ -182,7 +180,7 @@ def page_plan(run: Path, manifest: dict) -> None:
         st.warning(md(f"Buying everything worth buying would cost {usd(gate['B_max'])} and leave only a {1 - cmp_.loc['Everything', 'p_shortfall']:.0%} chance of staying above the buffer. The plan below spends {usd(cmp_.loc['C', 'spend'])} where each dollar earns the most."))
     else:
         st.subheader(md(f"Safe budget this week: {usd(gate['B'])}"))
-        st.error(md(f"Cash at risk regardless of purchasing: even with no new orders the chance of staying above the buffer is {1 - cmp_.loc['Nothing', 'p_shortfall']:.0%}, below your {conf:.0%} target." + (" The plan shown is the best-effort variant." if fb == "best_effort" else " As specified, the gate returns a budget of zero in this case.")))
+        st.error(md(f"Cash at risk regardless of purchasing: even with no new orders the chance of staying above the buffer is {1 - cmp_.loc['Nothing', 'p_shortfall']:.0%}, below your {conf:.0%} target." + (f" The plan shown is the one with the best chance: {res['p_safe']:.0%}." if fb == "max_prob" else " With this setting the gate returns a budget of zero.")))
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Cash in the bank", usd(res["cash_now"]))
     c2.metric("Plan spend", usd(cmp_.loc["C", "spend"]))

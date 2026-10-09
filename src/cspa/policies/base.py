@@ -9,7 +9,6 @@ Every policy is a (budget rule, allocation rule) pair:
     D              open-to-buy     full need in priority order
     C_gate_prop    cash gate       proportional to A's need     (ablation)
     OTB_marginal   open-to-buy     marginal value per dollar    (ablation)
-    C_plus         cash gate       value per dollar committed   (variant: capital-aware ranking + best-effort fallback)
 """
 from __future__ import annotations
 
@@ -123,12 +122,7 @@ class PlanContext:
 
     @cached_property
     def table(self) -> ChunkTable:
-        return build_chunks(self.info.cover, self.position, self.p.unit_cost, self.cu, self.co, self.p.pack_size, self.p.moq)
-
-    @cached_property
-    def table_committed(self) -> ChunkTable:
-        """Same chunks as `table`, ranked by profit per dollar of capital committed (see allocate/marginal.py)."""
-        return build_chunks(self.info.cover, self.position, self.p.unit_cost, self.cu, self.co, self.p.pack_size, self.p.moq, rank_by="committed")
+        return build_chunks(self.info.cover, self.position, self.p.unit_cost, self.cu, self.co, self.p.pack_size, self.p.moq, rank_by=str(self.info.cfg.allocator.rank_by))
 
     @cached_property
     def stockout_prob_now(self) -> np.ndarray:
@@ -174,11 +168,8 @@ class PlanContext:
     def alloc_marginal(self) -> Callable[[float], np.ndarray]:
         return lambda B: allocate(self.table, B)
 
-    def alloc_marginal_committed(self) -> Callable[[float], np.ndarray]:
-        return lambda B: allocate(self.table_committed, B)
-
     def allocator(self, rule: str) -> Callable[[float], np.ndarray]:
-        rules = {"need": self.alloc_need, "proportional": self.alloc_proportional, "priority": self.alloc_priority, "marginal": self.alloc_marginal, "marginal_committed": self.alloc_marginal_committed}
+        rules = {"need": self.alloc_need, "proportional": self.alloc_proportional, "priority": self.alloc_priority, "marginal": self.alloc_marginal}
         return rules[rule]()
 
     # ---- budget rules ----
@@ -203,7 +194,8 @@ class PlanContext:
             max_iter=int(g.max_bisection_iter),
             n_grid=int(g.n_grid),
             on_infeasible=str(g.on_infeasible if on_infeasible is None else on_infeasible),
-            tail=lambda B: float(np.quantile(sim(B).cash[:, -1], a)),
+            tail=lambda B: (float(np.quantile(sim(B).min_cash, a)), float(np.quantile(sim(B).cash[:, -1], a))),
+            n_refine=int(g.n_refine),
         )
 
 
@@ -213,7 +205,7 @@ class Policy:
     name = "base"
     label = ""
     budget_rule = "none"  # none | otb | gate
-    alloc_rule = "need"  # need | proportional | priority | marginal | marginal_committed
+    alloc_rule = "need"  # need | proportional | priority | marginal
     on_infeasible: str | None = None  # None = use gate.on_infeasible from config
 
     def decide(self, state: WorldState, info: InfoSet) -> Orders:
