@@ -1,7 +1,8 @@
 # Every phase is runnable from here.  make all = data -> forecast -> backtest -> figures -> render
 # Uses the project venv if there is one, otherwise whatever `python` is on PATH.
 PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python)
-PYTHON311 ?= python3.11
+# Python 3.11 for `make setup`: one on PATH, else one installed by uv under ~/.local/share/uv.
+PYTHON311 ?= $(or $(shell command -v python3.11 2>/dev/null),$(firstword $(wildcard $(HOME)/.local/share/uv/python/cpython-3.11*/bin/python3.11)),python3.11)
 CONFIG ?= configs/default.yaml
 EXPERIMENTS ?= configs/experiments.yaml
 ARGS = --config $(CONFIG) --experiments $(EXPERIMENTS)
