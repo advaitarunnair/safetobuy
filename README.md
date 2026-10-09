@@ -98,6 +98,7 @@ This is not "an ML system" end to end, and nothing here should be read that way.
 The repo includes a small results bundle, so the app runs straight from a clone:
 
 ```bash
+git clone https://github.com/advaitarunnair/safetobuy.git && cd safetobuy
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r app/requirements.txt
 streamlit run app/streamlit_app.py

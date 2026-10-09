@@ -21,8 +21,10 @@ Numbers quoted in this file come from tuning-window runs whose console output is
 | 6 | **LLM model** | `claude-haiku-5-5`, low effort, as instructed. Server-side refusal fallback is off because it is not offered for Haiku; a refusal falls back to templates like any other failure. Not tested live (no API key on the build machine). | `configs/default.yaml -> llm` |
 | 7 | **Deployment and CSV upload** | Not deployed (needs your Streamlit login); click-by-click steps are in the README. CSV upload is not included. | n/a |
 
-Still yours: installing and authenticating `gh` so the repo can be created and pushed, the
-Streamlit deploy click, the video, and the Devpost form.
+| 8 | **GitHub** | Repository `advaitarunnair/safetobuy`, created private with `gh`, pushed, then made public as instructed. Commits are authored with the account's GitHub no-reply address, not a personal email, because the repo is public. | `git config user.email` in the repo |
+| 9 | **Project folder** | The session was moved to `~/Projects/forgehacks` through the app's folder picker (the app could not create the folder itself). `make setup` there rebuilds the Python 3.11 environment; a fresh clone in a temp folder was used to confirm that `make setup` and `make test` work from a new location. | n/a |
+
+Still yours: the Streamlit deploy click, the video, and the Devpost form.
 
 ---
 
@@ -197,7 +199,7 @@ the 10% quantile.
 | App bundle | `results/<run_id>/app/` stores calibrated quantiles only (no raw quantiles), about 6.5 MB for the largest file. `render_results.py` also writes `demo.json` there, naming the week the demo script uses; the app opens on it. That week is chosen by code: among weeks where the gate is binding, the one where policy A's order would carry the largest shortfall risk. It is an illustration, not a result. |
 | Fresh-clone check | The repo was cloned to a temp folder with no `data/raw`, a new Python 3.11 venv was given only `app/requirements.txt`, and every app page was driven headlessly and the server booted. `uv pip compile` resolved both requirements files to Linux x86-64 wheels for Python 3.11. Nothing was run on an actual Linux machine. |
 | Forecast caches | Produced once per slice before the gate settings were tuned and not regenerated afterwards; forecasting settings never changed, and the forecaster is seeded. |
-| Git | Local commits only until `gh` is installed and authenticated on the build machine. |
+| Git | The run manifest records the commit the backtest ran from; the dirty flag looks at tracked files only, since every run creates new files. History was rewritten once before the first push to change the author address, and the final backtests were re-run afterwards so the recorded commit exists in the published history. |
 
 ---
 

@@ -76,6 +76,6 @@ the margin it gives up), test on a retailer's real costs and payment terms, and 
 
 ## Links
 
-- Repository: see the final report (filled in once the repo is pushed).
+- Repository: https://github.com/advaitarunnair/safetobuy
 - Demo video: to be recorded and uploaded as a public YouTube video.
 - Live app: Streamlit Community Cloud, after the deploy click.
