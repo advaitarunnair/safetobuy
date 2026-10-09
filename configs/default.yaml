@@ -1,0 +1,119 @@
+# Default configuration. Every OPEN / SUGGESTED choice in here is explained in
+# docs/ASSUMPTIONS.md. Nothing in src/ hard-codes these values.
+
+project:
+  # PROJECT_NAME placeholder. The team picks the final name; change it here only.
+  name: "Cash-Safe Purchasing Assistant"
+  persona: "a small Singapore minimart"
+
+seed: 20261009
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  store_id: CA_1
+  dept_id: FOODS_3            # M5 calls this a department; cat_id is FOODS
+  n_skus: 300
+  selection:
+    mode: pre_backtest        # pre_backtest | final_year  (see ASSUMPTIONS: avoids selection lookahead)
+    weeks: 52
+
+horizons:
+  review_period_weeks: 1
+  forecast_horizon_weeks: 4
+  cash_horizon_weeks: 4
+
+forecast:
+  model: lgbm                 # which cached forecaster policies read: lgbm | seasonal_naive | naive
+  quantiles: [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95]
+  refit_every_weeks: 4
+  train_window_weeks: 156
+  min_train_weeks: 60
+  warmup_weeks: 30            # rolling-origin forecasts issued before the first decision; feeds conformal + residual bank
+  baseline_residual_weeks: 52
+  lgbm:
+    n_estimators: 300
+    learning_rate: 0.05
+    num_leaves: 31
+    min_data_in_leaf: 40
+    feature_fraction: 0.8
+    bagging_fraction: 0.8
+    bagging_freq: 1
+    lambda_l2: 1.0
+    num_threads: 4
+  conformal:
+    enabled: true
+    calibration_weeks: 26
+    min_samples: 200
+    scale_floor: 1.0
+
+sampling:
+  method: block               # block (cross-SKU correlation preserved) | independent
+  bank_weeks: 52
+  block_len: 2
+  n_paths_backtest: 500
+  n_paths_app: 2000
+  tail_cap: 0.999
+
+# ---- SYNTHETIC parameters. Only demand and prices are real. ----
+synthetic:
+  margin_range: [0.22, 0.40]            # gross margin on reference price, drawn per SKU
+  lead_time_weeks:
+    values: [1, 2]
+    probs: [0.6, 0.4]
+  pack_sizes:
+    values: [1, 6, 12, 24]
+    max_share_of_weekly_demand: 0.5     # a pack is never more than this share of a SKU's mean weekly units
+  moq_packs:
+    values: [1, 2]
+    probs: [0.7, 0.3]
+  suppliers:
+    - {name: S1_pay_on_delivery, share: 0.5, pay_delay_weeks: 0}
+    - {name: S2_net14, share: 0.3, pay_delay_weeks: 2}
+    - {name: S3_net30, share: 0.2, pay_delay_weeks: 4}
+  perishable_share: 0.20
+  spoilage_rate_per_week: 0.10          # share of leftover perishable stock written off each week
+  salvage_frac_of_cost: 0.20
+  holding_rate_annual: 0.20             # decision parameter only (not a simulated cash flow)
+  capital_rate_annual: 0.15             # decision parameter only
+  fixed_cost_share_of_gross_margin: 0.95
+  fixed_cost_lump_every_weeks: 4
+  fixed_cost_lump_offset: 2
+  calibration_weeks: 13
+  burn_in_weeks: 8
+
+risk:
+  alpha: 0.10
+  buffer_weeks_of_fixed_costs: 2.0
+
+gate:
+  mode: mc                    # mc | deterministic (p10 demand path)
+  deterministic_quantile: 0.10
+  continuation: replace_sales # replace_sales | none (see cash/simulate.py and ASSUMPTIONS)
+  tol_frac: 0.005
+  tol_abs: 20.0
+  max_bisection_iter: 12
+  n_grid: 8
+  on_infeasible: zero         # zero (DECIDED default) | best_effort (see ASSUMPTIONS)
+
+allocator:
+  perishable_overage: spoilage   # spoilage: rate*(c-salvage)+holding | full_loss: c-salvage+holding
+
+policies:
+  reorder_point:
+    z: 1.65
+  otb:
+    target_weeks_cover: 1.0
+    planned_markdowns: 0.0
+
+world:
+  shortfall_rule: overdraft   # overdraft | cut_proportional
+
+llm:
+  enabled: true               # only used when ANTHROPIC_API_KEY is set; otherwise templates
+  model: claude-opus-5-5
+  effort: low                 # the task is rewording supplied numbers, nothing more
+  max_tokens: 16000
+  refusal_fallback: true      # server-side fallback if the model declines
+  max_skus_per_call: 40
+  cache_dir: data/processed/llm_cache

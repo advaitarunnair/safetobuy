@@ -1,0 +1,40 @@
+# Experiment grid for scripts/run_backtest.py. See docs/ASSUMPTIONS.md for definitions.
+
+# Windows are defined from the END of observed history so they are robust to slice changes.
+# start_week = n_observed_weeks - weeks_before_end. role: tune | holdout.
+# Holdout windows are never looked at while tuning policy C; the headline uses holdout only.
+windows:
+  - {name: W1, weeks_before_end: 104, n_weeks: 26, role: tune}
+  - {name: W2, weeks_before_end: 78, n_weeks: 26, role: tune}
+  - {name: W3, weeks_before_end: 52, n_weeks: 26, role: holdout}
+  - {name: W4, weeks_before_end: 26, n_weeks: 26, role: holdout}
+
+# Budget stress s: in the heaviest fixed-cost week of each cycle, expected revenue minus
+# fixed costs covers only s x the ideal weekly replenishment spend.
+stress_levels: [0.5, 0.7, 0.9]
+default_stress: 0.7
+
+# Opening cash, in weeks of average fixed costs (the buffer default is 2.0 weeks).
+start_cash_weeks: [2.5, 3.0, 4.0]
+default_start_cash_weeks: 3.0
+
+shortfall_rules: [overdraft, cut_proportional]
+
+policies: [A, B, C, D, C_plus, C_gate_prop, OTB_marginal]
+
+headline:
+  roles: [holdout]            # which windows feed the headline sentence
+  shortfall_rule: overdraft
+
+bootstrap:
+  n_boot: 2000
+  block_weeks: 4
+  ci: 0.90
+
+app_bundle:
+  window: W4
+  stress_levels: [0.5, 0.7, 0.9]
+  start_cash_weeks: 3.0
+  shortfall_rule: overdraft
+
+n_jobs: 6

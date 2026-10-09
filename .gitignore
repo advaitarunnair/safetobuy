@@ -1,0 +1,17 @@
+# M5 raw files are never committed (Kaggle licence, size)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# partial runs are scratch; full runs under results/<run_id>/ are committed on purpose
+results/*_tune/
+results/*_quick/
+
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+.streamlit/secrets.toml
+.env
