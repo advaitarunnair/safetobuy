@@ -122,7 +122,7 @@ If the files are missing, `make data` stops and prints these steps. It never fab
 **2. Install and run:**
 
 ```bash
-make setup && source .venv/bin/activate   # Python 3.11 venv with pinned requirements
+make setup                                # Python 3.11 venv in .venv (uv if installed, else python3.11); make uses it automatically
 make test                                 # test-suite, runs on a synthetic fixture (no M5 needed)
 make data                                 # slice, weekly aggregation, synthetic parameters
 make forecast                             # rolling-origin quantile forecasts + evaluation (about 6 minutes)

@@ -20,7 +20,7 @@ def app(pipeline, monkeypatch):
 
 def test_plan_page_has_all_components(app):
     subs = [s.value for s in app.subheader]
-    assert any(s.startswith("Safe budget this week:") for s in subs)  # component 2
+    assert any(s.startswith("Safe budget this week:") or s.startswith("No budget is safe this week.") for s in subs)  # component 2
     assert any(s.startswith("Cash runway") for s in subs)  # component 1 (fan chart)
     assert any("What to buy" in s for s in subs)  # component 3
     labels = [m.label for m in app.metric]
@@ -37,7 +37,7 @@ def test_sliders_recompute_the_gate(app):
     app.sidebar.slider[0].set_value(1).run()  # risk tolerance 1%
     assert not app.exception
     strict = [s.value for s in app.subheader][0]
-    assert "99% confidence" in strict or strict.startswith("Safe budget this week:")
+    assert "99% confidence" in strict or strict.startswith("Safe budget this week:") or strict.startswith("No budget is safe")
     buf = app.sidebar.slider[1]
     buf.set_value(buf.max).run()  # a much larger buffer
     assert not app.exception

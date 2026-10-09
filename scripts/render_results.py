@@ -271,6 +271,7 @@ def demo_block(run: Path, cfg, exp) -> dict[str, str]:
         txt = f"No week in the bundled scenario (stress {int(round(scen['stress'] * 100))}%) has a binding cash gate at default settings, so there is no constrained week to demo. Lower the risk-tolerance slider or raise the buffer in the app to show the gate binding."
         return {"demo_week": txt, "demo_figure": txt}
     _, i, week, res = best
+    (run / "app" / "demo.json").write_text(json.dumps({"stress_pct": int(round(scen["stress"] * 100)), "week": i + 1, "scenario": sid}) + "\n")  # the app opens on this week
     w, cmp_ = res["facts"]["week"]["fmt"], res["compare"].set_index("plan")
     date = pd.Timestamp(b.panel.weeks["start_date"].iloc[week]).date()
     figure = f"{w['cash']} in the bank, and everything worth buying this week costs {w['full_cost']}. The safe budget is {w['budget']}."

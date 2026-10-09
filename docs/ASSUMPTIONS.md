@@ -194,6 +194,9 @@ the 10% quantile.
 | Screenshots | `make screenshots` starts the app, drives headless Chrome over the DevTools protocol and writes one full-page PNG per page. |
 | Runtime | On an Apple M5 with 6 workers: forecasts about 6.5 minutes per slice, full backtest (40 scenarios x 6 policies x 26 weeks) about 40 seconds. Exact time is in each manifest. |
 | LLM guardrail | Sent: display strings of the facts only. Every number in the output must equal a supplied number after the same rounding; spelled-out numbers are rejected; a failing line is replaced by its template. Tested with a fake client. |
+| App bundle | `results/<run_id>/app/` stores calibrated quantiles only (no raw quantiles), about 6.5 MB for the largest file. `render_results.py` also writes `demo.json` there, naming the week the demo script uses; the app opens on it. That week is chosen by code: among weeks where the gate is binding, the one where policy A's order would carry the largest shortfall risk. It is an illustration, not a result. |
+| Fresh-clone check | The repo was cloned to a temp folder with no `data/raw`, a new Python 3.11 venv was given only `app/requirements.txt`, and every app page was driven headlessly and the server booted. `uv pip compile` resolved both requirements files to Linux x86-64 wheels for Python 3.11. Nothing was run on an actual Linux machine. |
+| Forecast caches | Produced once per slice before the gate settings were tuned and not regenerated afterwards; forecasting settings never changed, and the forecaster is seeded. |
 | Git | Local commits only until `gh` is installed and authenticated on the build machine. |
 
 ---

@@ -136,8 +136,12 @@ def page_plan(run: Path, manifest: dict) -> None:
     st.sidebar.header("Shop situation")
     label = {s["scenario"]: f"Budget stress {int(round(s['stress'] * 100))}%" for s in scen}
     sids = [s["scenario"] for s in scen]
+    demo = {}
+    demo_file = run / "app" / "demo.json"  # written by render_results.py: the week used in the demo script
+    if demo_file.exists():
+        demo = json.loads(demo_file.read_text())
     try:  # ?stress=70&week=5 preselects a scenario and decision week (used for screenshots and the demo)
-        pre = next(i for i, s in enumerate(scen) if int(round(s["stress"] * 100)) == int(st.query_params.get("stress", "x")))
+        pre = next(i for i, s in enumerate(scen) if int(round(s["stress"] * 100)) == int(st.query_params.get("stress", demo.get("stress_pct", "x"))))
     except (StopIteration, ValueError):
         pre = min(1, len(scen) - 1)
     sid = st.sidebar.selectbox("Scenario", sids, index=pre, format_func=label.get, help="How heavy the monthly lump of fixed costs is. Lower % = tighter.")
@@ -146,7 +150,7 @@ def page_plan(run: Path, manifest: dict) -> None:
     weeks = sc["weeks"]
     dates = b.panel.weeks["start_date"]
     try:
-        wk0 = weeks[max(0, min(len(weeks) - 1, int(st.query_params.get("week", "3")) - 1))]
+        wk0 = weeks[max(0, min(len(weeks) - 1, int(st.query_params.get("week", demo.get("week", 3))) - 1))]
     except ValueError:
         wk0 = weeks[min(2, len(weeks) - 1)]
     week = st.sidebar.select_slider("Decision week", options=weeks, value=wk0, format_func=lambda w: f"wk {weeks.index(w) + 1} ({pd.Timestamp(dates.iloc[w]).date()})")
@@ -179,7 +183,7 @@ def page_plan(run: Path, manifest: dict) -> None:
         st.subheader(md(f"Safe budget this week: {usd(gate['B'])} at {conf:.0%} confidence"))
         st.warning(md(f"Buying everything worth buying would cost {usd(gate['B_max'])} and leave only a {1 - cmp_.loc['Everything', 'p_shortfall']:.0%} chance of staying above the buffer. The plan below spends {usd(cmp_.loc['C', 'spend'])} where each dollar earns the most."))
     else:
-        st.subheader(md(f"Safe budget this week: {usd(gate['B'])}"))
+        st.subheader(md(f"No budget is safe this week. Best-chance budget: {usd(gate['B'])}"))
         st.error(md(f"Cash at risk regardless of purchasing: even with no new orders the chance of staying above the buffer is {1 - cmp_.loc['Nothing', 'p_shortfall']:.0%}, below your {conf:.0%} target." + (f" The plan shown is the one with the best chance: {res['p_safe']:.0%}." if fb == "max_prob" else " With this setting the gate returns a budget of zero.")))
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Cash in the bank", usd(res["cash_now"]))

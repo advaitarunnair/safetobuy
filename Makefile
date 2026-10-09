@@ -1,5 +1,7 @@
 # Every phase is runnable from here.  make all = data -> forecast -> backtest -> figures -> render
-PY ?= python
+# Uses the project venv if there is one, otherwise whatever `python` is on PATH.
+PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python)
+PYTHON311 ?= python3.11
 CONFIG ?= configs/default.yaml
 EXPERIMENTS ?= configs/experiments.yaml
 ARGS = --config $(CONFIG) --experiments $(EXPERIMENTS)
@@ -29,10 +31,12 @@ help:
 	@echo "make all        data forecast backtest figures render"
 
 setup:
-	python3.11 -m venv .venv
-	.venv/bin/pip install --upgrade pip
-	.venv/bin/pip install -r requirements.txt
-	@echo "now: source .venv/bin/activate"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python -r requirements.txt; \
+	else \
+		$(PYTHON311) -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -r requirements.txt; \
+	fi
+	@echo "ready: make targets now use .venv/bin/python"
 
 data:
 	$(RUN) scripts/prepare_data.py $(ARGS)
