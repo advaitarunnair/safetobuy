@@ -12,7 +12,7 @@ ForgeHacks 2026, theme "AI for Real World Problems", track AI + Business.
 <!-- BEGIN:headline -->
 > **Policy C had 27.9% fewer cash-shortfall weeks than policy A (62 vs 86) (90% bootstrap interval for the reduction: +18.4% to +42.4%), and 1.0% higher margin than policy B (90% bootstrap interval for the difference: +0.6% to +1.7%), but more shortfall weeks than B (62 vs 58). Against policy A, C's margin was 2.9% lower. The planned headline form is not supported by this run, so the result is stated as it happened.**
 >
-> Scope: holdout windows, stress sweep, overdraft; 6 scenarios, 156 simulated weeks. Run `20261010-005514_f9b8c73f_foods3`.
+> Scope: holdout windows, stress sweep, overdraft; 6 scenarios, 156 simulated weeks. Run `20261010-010653_f9b8c73f_foods3`.
 <!-- END:headline -->
 
 Every number in the Results section is written by `scripts/render_results.py` from a run
@@ -202,7 +202,7 @@ Consequences:
 <!-- BEGIN:headline -->
 > **Policy C had 27.9% fewer cash-shortfall weeks than policy A (62 vs 86) (90% bootstrap interval for the reduction: +18.4% to +42.4%), and 1.0% higher margin than policy B (90% bootstrap interval for the difference: +0.6% to +1.7%), but more shortfall weeks than B (62 vs 58). Against policy A, C's margin was 2.9% lower. The planned headline form is not supported by this run, so the result is stated as it happened.**
 >
-> Scope: holdout windows, stress sweep, overdraft; 6 scenarios, 156 simulated weeks. Run `20261010-005514_f9b8c73f_foods3`.
+> Scope: holdout windows, stress sweep, overdraft; 6 scenarios, 156 simulated weeks. Run `20261010-010653_f9b8c73f_foods3`.
 <!-- END:headline -->
 
 The headline is computed on **held-out windows only** (never used to choose settings), over the
@@ -298,7 +298,7 @@ and per stress level.
 ### Comparison slice
 
 <!-- BEGIN:secondary_slice -->
-**Store CA_1, department HOUSEHOLD_1** (300 of 532 SKUs), same settings as the primary slice with nothing retuned. Run `20261010-005551_e25dab98_household1`, config hash `e25dab98faa9`.
+**Store CA_1, department HOUSEHOLD_1** (300 of 532 SKUs), same settings as the primary slice with nothing retuned. Run `20261010-010733_e25dab98_household1`, config hash `e25dab98faa9`.
 
 - **Fewer cash-shortfall weeks than A: not informative.** A ran short in only 3 of 156 weeks (C: 0), too few to support a claim.
 - **Higher margin than B: supported.** 1.4% higher (90% interval +1.3% to +1.7%).
@@ -337,13 +337,13 @@ the share of realised weekly sales inside each central interval; the targets are
 ### Figures
 
 <!-- BEGIN:figures -->
-![ablation](results/20261010-005514_f9b8c73f_foods3/figures/ablation.png)
-![cash_paths](results/20261010-005514_f9b8c73f_foods3/figures/cash_paths.png)
-![forecast_coverage](results/20261010-005514_f9b8c73f_foods3/figures/forecast_coverage.png)
-![forecast_wql](results/20261010-005514_f9b8c73f_foods3/figures/forecast_wql.png)
-![margin_by_stress](results/20261010-005514_f9b8c73f_foods3/figures/margin_by_stress.png)
-![risk_return](results/20261010-005514_f9b8c73f_foods3/figures/risk_return.png)
-![shortfalls_by_stress](results/20261010-005514_f9b8c73f_foods3/figures/shortfalls_by_stress.png)
+![ablation](results/20261010-010653_f9b8c73f_foods3/figures/ablation.png)
+![cash_paths](results/20261010-010653_f9b8c73f_foods3/figures/cash_paths.png)
+![forecast_coverage](results/20261010-010653_f9b8c73f_foods3/figures/forecast_coverage.png)
+![forecast_wql](results/20261010-010653_f9b8c73f_foods3/figures/forecast_wql.png)
+![margin_by_stress](results/20261010-010653_f9b8c73f_foods3/figures/margin_by_stress.png)
+![risk_return](results/20261010-010653_f9b8c73f_foods3/figures/risk_return.png)
+![shortfalls_by_stress](results/20261010-010653_f9b8c73f_foods3/figures/shortfalls_by_stress.png)
 <!-- END:figures -->
 
 ### Run details
@@ -351,9 +351,9 @@ the share of realised weekly sales inside each central interval; the targets are
 <!-- BEGIN:run_info -->
 | Item | Value |
 | --- | --- |
-| Run id | `20261010-005514_f9b8c73f_foods3` |
-| Timestamp (UTC) | 2026-10-09T16:55:51Z |
-| Git commit | `85dd358ada3699155c0156fb3254b2e9f9e8820e` |
+| Run id | `20261010-010653_f9b8c73f_foods3` |
+| Timestamp (UTC) | 2026-10-09T17:07:32Z |
+| Git commit | `a01509a220001c7433d430e47f455bb71a0ac328` |
 | Config hash | `f9b8c73fa808` |
 | Seed | 20261009 |
 | Data slice | store CA_1, department FOODS_3, 300 of 823 SKUs (84% of department units in the selection window) |

@@ -54,7 +54,7 @@ the result.
 <!-- BEGIN:headline -->
 > **Policy C had 27.9% fewer cash-shortfall weeks than policy A (62 vs 86) (90% bootstrap interval for the reduction: +18.4% to +42.4%), and 1.0% higher margin than policy B (90% bootstrap interval for the difference: +0.6% to +1.7%), but more shortfall weeks than B (62 vs 58). Against policy A, C's margin was 2.9% lower. The planned headline form is not supported by this run, so the result is stated as it happened.**
 >
-> Scope: holdout windows, stress sweep, overdraft; 6 scenarios, 156 simulated weeks. Run `20261010-005514_f9b8c73f_foods3`.
+> Scope: holdout windows, stress sweep, overdraft; 6 scenarios, 156 simulated weeks. Run `20261010-010653_f9b8c73f_foods3`.
 <!-- END:headline -->
 
 <!-- BEGIN:verdict -->
@@ -83,7 +83,7 @@ the result.
 A second slice, run with the same settings:
 
 <!-- BEGIN:secondary_slice -->
-**Store CA_1, department HOUSEHOLD_1** (300 of 532 SKUs), same settings as the primary slice with nothing retuned. Run `20261010-005551_e25dab98_household1`, config hash `e25dab98faa9`.
+**Store CA_1, department HOUSEHOLD_1** (300 of 532 SKUs), same settings as the primary slice with nothing retuned. Run `20261010-010733_e25dab98_household1`, config hash `e25dab98faa9`.
 
 - **Fewer cash-shortfall weeks than A: not informative.** A ran short in only 3 of 156 weeks (C: 0), too few to support a claim.
 - **Higher margin than B: supported.** 1.4% higher (90% interval +1.3% to +1.7%).

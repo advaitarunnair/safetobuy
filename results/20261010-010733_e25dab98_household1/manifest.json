@@ -1,9 +1,9 @@
 {
-  "run_id": "20261010-005551_e25dab98_household1",
-  "timestamp": "2026-10-09T16:56:20Z",
+  "run_id": "20261010-010733_e25dab98_household1",
+  "timestamp": "2026-10-09T17:08:03Z",
   "partial_run": false,
   "git": {
-    "commit": "85dd358ada3699155c0156fb3254b2e9f9e8820e",
+    "commit": "a01509a220001c7433d430e47f455bb71a0ac328",
     "dirty": true
   },
   "config_hash": "e25dab98faa9",
@@ -182,7 +182,7 @@
     "monotonicity_violations": 812
   },
   "fairness_check": "passed",
-  "runtime_seconds": 27.9,
+  "runtime_seconds": 29.7,
   "versions": {
     "python": "3.11.17",
     "numpy": "2.3.5",
