@@ -161,3 +161,30 @@ def test_plan_report_decisions_and_deferral_cost():
     a, f = pos[i] + half["qty"][i], pos[i] + half["target_qty"][i]
     expect = cu[i] * (np.maximum(cover[:, i] - a, 0).mean() - np.maximum(cover[:, i] - f, 0).mean())
     assert half["exp_margin_lost"][i] == pytest.approx(expect)
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_capital_aware_ranking_changes_the_order_not_the_plan(seed):
+    cover, pos, cost, cu, co, pack, moq = instance(seed)
+    base = build_chunks(cover, pos, cost, cu, co, pack, moq)
+    cap = build_chunks(cover, pos, cost, cu, co, pack, moq, rank_by="committed")
+    assert np.array_equal(base.target_qty, cap.target_qty)  # same units are worth buying
+    assert np.array_equal(allocate(cap, np.inf), base.target_qty) and cap.total_cost == pytest.approx(base.total_cost)
+    assert (np.diff(cap.density) <= 1e-12).all() and (cap.density <= base.density.max() + 1e-12).all()
+    for B in [40.0, 300.0, base.total_cost * 0.5]:
+        q = allocate(cap, B)
+        assert float(q @ cost) <= B + 1e-6 and satisfies(q, pack, moq) and (q <= cap.target_qty).all()
+    with pytest.raises(ValueError):
+        build_chunks(cover, pos, cost, cu, co, pack, moq, rank_by="vibes")
+
+
+def test_capital_aware_ranking_prefers_the_unit_that_will_sell():
+    """Two SKUs, one unit of budget. SKU 0: high margin, sells half the time. SKU 1: low margin, always sells."""
+    cover = np.column_stack([np.repeat([0.0, 1.0], 100), np.ones(200)])
+    pos, cost = np.zeros(2, dtype=np.int64), np.array([10.0, 10.0])
+    cu, co = np.array([6.5, 2.8]), np.array([0.05, 0.05])
+    one = np.ones(2, dtype=np.int64)
+    by_cost = allocate(build_chunks(cover, pos, cost, cu, co, one, one), 10.0)
+    by_capital = allocate(build_chunks(cover, pos, cost, cu, co, one, one, rank_by="committed"), 10.0)
+    assert list(by_cost) == [1, 0]  # 0.5 * 6.5 = 3.25 expected profit beats 2.8 ...
+    assert list(by_capital) == [0, 1]  # ... but half the time its $10 stays on the shelf: 3.25 / 15 < 2.8 / 10

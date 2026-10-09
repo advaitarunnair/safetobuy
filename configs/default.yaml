@@ -67,10 +67,9 @@ synthetic:
   moq_packs:
     values: [1, 2]
     probs: [0.7, 0.3]
-  suppliers:
-    - {name: S1_pay_on_delivery, share: 0.5, pay_delay_weeks: 0}
-    - {name: S2_net14, share: 0.3, pay_delay_weeks: 2}
-    - {name: S3_net30, share: 0.2, pay_delay_weeks: 4}
+  suppliers:                            # every bill must fall inside the cash horizon (validated)
+    - {name: S1_pay_on_delivery, share: 0.6, pay_delay_weeks: 0}
+    - {name: S2_net7, share: 0.4, pay_delay_weeks: 1}
   perishable_share: 0.20
   spoilage_rate_per_week: 0.10          # share of leftover perishable stock written off each week
   salvage_frac_of_cost: 0.20
@@ -79,7 +78,7 @@ synthetic:
   fixed_cost_share_of_gross_margin: 0.95
   fixed_cost_lump_every_weeks: 4
   fixed_cost_lump_offset: 2
-  calibration_weeks: 13
+  calibration_weeks: 52                 # a full year, so fixed costs are not sized to one season
   burn_in_weeks: 8
 
 risk:
@@ -90,6 +89,7 @@ gate:
   mode: mc                    # mc | deterministic (p10 demand path)
   deterministic_quantile: 0.10
   continuation: replace_sales # replace_sales | none (see cash/simulate.py and ASSUMPTIONS)
+  charge_beyond_horizon: false # true: allow terms that reach past the horizon and count those bills in its last week
   tol_frac: 0.005
   tol_abs: 20.0
   max_bisection_iter: 12
@@ -103,7 +103,7 @@ policies:
   reorder_point:
     z: 1.65
   otb:
-    target_weeks_cover: 1.0
+    target_weeks_cover: auto   # auto = same total target stock as policy A; or a number of weeks
     planned_markdowns: 0.0
 
 world:

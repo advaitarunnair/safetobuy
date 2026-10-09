@@ -21,13 +21,10 @@ for sub in ("src", "scripts"):
     if str(ROOT / sub) not in sys.path:
         sys.path.insert(0, str(ROOT / sub))
 
-from cspa.allocate.marginal import plan_report  # noqa: E402
 from cspa.config import PROJECT_NAME, as_config  # noqa: E402
-from cspa.explain.facts import build_facts  # noqa: E402
-from cspa.explain.llm import explain, llm_available  # noqa: E402
-from cspa.policies import PlanContext, make_policy  # noqa: E402
-from cspa.sim.backtest import make_info  # noqa: E402
+from cspa.explain.llm import llm_available  # noqa: E402
 from cspa.sim.bundle import load_bundle  # noqa: E402
+from cspa.sim.weekplan import buffer_step, compute_week_plan, default_buffer, default_fallback  # noqa: E402
 
 SURFACE, INK, INK2, MUTED, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9"
 POLICY_COLOR = {"A": "#2a78d6", "B": "#eb6834", "C": "#1baf7a", "D": "#eda100"}
@@ -62,70 +59,23 @@ def get_manifest(run_dir: str) -> dict:
 
 @st.cache_data(show_spinner="Re-running the cash gate and allocator for this week...")
 def compute_week(run_dir: str, sid: str, week: int, alpha: float, buffer: float, n_paths: int, fallback: str, use_llm: bool) -> dict:
-    b = get_bundle(run_dir)
-    cfg, p = b.cfg, b.params
-    cal, state = b.cal(sid), b.state(sid, week)
-    H = int(cfg.horizons.cash_horizon_weeks)
-    sched = cal.schedule(week, H)
-    info = make_info(b.panel, b.cache, p, cfg, week, sched, buffer, alpha, n_paths)
-    ctx = PlanContext(state, info)
-    alloc = ctx.allocator("marginal")
-    gate = ctx.gate(alloc, alpha=alpha, buffer=buffer, on_infeasible=fallback)
-    qty = alloc(gate.B)
-    report = plan_report(p.skus, qty, ctx.table, info.cover, info.cover_weeks)
+    return compute_week_plan(get_bundle(run_dir), sid, week, alpha, buffer, n_paths, fallback, use_llm)
 
-    plans = {"C": qty, "Nothing": np.zeros(p.n, dtype=np.int64), "Everything": ctx.table.target_qty}
-    for name in ("A", "B", "D"):
-        plans[name] = make_policy(name).decide(state, info).qty
-    sims = {k: ctx.simulate(v) for k, v in plans.items()}
-    compare = pd.DataFrame(
-        [
-            {
-                "plan": k,
-                "spend": float(v @ p.unit_cost),
-                "p_shortfall": 1.0 - sims[k].prob_above(buffer),
-                "exp_margin": float(sims[k].margin.mean()),
-                "p05_min_cash": float(np.quantile(sims[k].min_cash, 0.05)),
-            }
-            for k, v in plans.items()
-        ]
-    )
-    info_ind = make_info(b.panel, b.cache, p, cfg, week, sched, buffer, alpha, n_paths, method="independent")
-    p_safe_independent = PlanContext(state, info_ind).simulate(qty).prob_above(buffer)
 
-    facts = build_facts(report, p, gate, state.cash, buffer, alpha, sims["C"].prob_above(buffer), sims["Everything"].prob_above(buffer), H)
-    if use_llm:
-        expl = explain(facts, cfg)
-    else:
-        from cspa.explain.templates import explain_with_templates
+@st.cache_data(show_spinner=False)
+def get_blocks(run_dir: str) -> dict:
+    from render_results import build_blocks
 
-        expl = {**explain_with_templates(facts), "rejected": [], "error": None}
-    report["reason"] = report["sku"].map(expl["lines"]).fillna("No order needed this week.")
-    report["source"] = report["sku"].map(expl["source"]).fillna("template")
-    report["lead_time"] = p.lead_time
-    report["perishable"] = p.perishable
-    qs = (0.05, 0.25, 0.5, 0.75, 0.95)
-    return {
-        "gate": gate.to_dict(),
-        "report": report,
-        "compare": compare,
-        "fan": {k: sims[k].quantiles(qs) for k in sims},
-        "cash_now": float(state.cash),
-        "fixed": sched,
-        "payables": state.payables[:H].copy(),
-        "p_safe": sims["C"].prob_above(buffer),
-        "p_safe_independent": p_safe_independent,
-        "summary": expl["summary"],
-        "summary_source": expl["summary_source"],
-        "rejected": expl["rejected"],
-        "llm_error": expl["error"],
-        "inventory_value": float(state.on_hand @ p.unit_cost),
-        "week_actual_units": float(b.panel.units[week].sum()) if week < b.panel.n_obs else None,
-    }
+    return build_blocks(Path(run_dir), include_demo=False)
 
 
 def usd(x: float) -> str:
     return f"${x:,.0f}"
+
+
+def md(text: str) -> str:
+    """Escape dollar signs: Streamlit's markdown would read a pair of them as LaTeX."""
+    return text.replace("\\$", "$").replace("$", "\\$")
 
 
 def data_banner(manifest: dict, cfg) -> None:
@@ -185,21 +135,29 @@ def page_plan(run: Path, manifest: dict) -> None:
     scen = b.meta["scenarios"]
     st.sidebar.header("Shop situation")
     label = {s["scenario"]: f"Budget stress {int(round(s['stress'] * 100))}%" for s in scen}
-    sid = st.sidebar.selectbox("Scenario", [s["scenario"] for s in scen], index=min(1, len(scen) - 1), format_func=label.get, help="How heavy the monthly lump of fixed costs is. Lower % = tighter.")
+    sids = [s["scenario"] for s in scen]
+    try:  # ?stress=70&week=5 preselects a scenario and decision week (used for screenshots and the demo)
+        pre = next(i for i, s in enumerate(scen) if int(round(s["stress"] * 100)) == int(st.query_params.get("stress", "x")))
+    except (StopIteration, ValueError):
+        pre = min(1, len(scen) - 1)
+    sid = st.sidebar.selectbox("Scenario", sids, index=pre, format_func=label.get, help="How heavy the monthly lump of fixed costs is. Lower % = tighter.")
     sc = b.scenario(sid)
     cal = b.cal(sid)
     weeks = sc["weeks"]
     dates = b.panel.weeks["start_date"]
-    week = st.sidebar.select_slider("Decision week", options=weeks, value=weeks[min(2, len(weeks) - 1)], format_func=lambda w: f"wk {weeks.index(w) + 1} ({pd.Timestamp(dates.iloc[w]).date()})")
+    try:
+        wk0 = weeks[max(0, min(len(weeks) - 1, int(st.query_params.get("week", "3")) - 1))]
+    except ValueError:
+        wk0 = weeks[min(2, len(weeks) - 1)]
+    week = st.sidebar.select_slider("Decision week", options=weeks, value=wk0, format_func=lambda w: f"wk {weeks.index(w) + 1} ({pd.Timestamp(dates.iloc[w]).date()})")
 
     st.sidebar.header("Your risk settings")
     alpha_pct = st.sidebar.slider("Risk tolerance: chance of dipping below the buffer you accept (%)", 1, 30, int(round(cfg.risk.alpha * 100)), help="alpha. The gate keeps P(cash never below the buffer over the horizon) at or above 100% minus this.")
-    step = max(50.0, round(cal.buffer / 40 / 50) * 50.0)
-    default_buffer = float(round(cal.buffer / step) * step)
-    buffer = st.sidebar.slider("Cash buffer ($)", 0.0, float(round(3 * cal.buffer / step) * step), default_buffer, step=step, help=f"Default = {cfg.risk.buffer_weeks_of_fixed_costs:g} weeks of average fixed costs.")
+    step = buffer_step(cal)
+    buffer = st.sidebar.slider("Cash buffer ($)", 0.0, float(round(3 * cal.buffer / step) * step), default_buffer(cal), step=step, format="$%d", help=f"Default = {cfg.risk.buffer_weeks_of_fixed_costs:g} weeks of average fixed costs.")
     with st.sidebar.expander("Advanced"):
         n_paths = st.select_slider("Monte Carlo demand paths", options=[250, 500, 1000, 2000, 4000], value=int(cfg.sampling.n_paths_app) if int(cfg.sampling.n_paths_app) in (250, 500, 1000, 2000, 4000) else 2000)
-        fb = st.radio("If no budget is safe", ["zero", "best_effort"], index=0 if cfg.gate.on_infeasible == "zero" else 1, format_func={"zero": "Buy nothing and flag it (as specified)", "best_effort": "Best-effort plan (C+ variant)"}.get)
+        fb = st.radio("If no budget is safe", ["zero", "best_effort"], index=0 if default_fallback(b) == "zero" else 1, format_func={"zero": "Buy nothing and flag it (policy C, as specified)", "best_effort": "Best-effort plan (policy C+)"}.get)
         use_llm = st.checkbox("AI-worded explanations", value=False, disabled=not llm_available(), help="Needs ANTHROPIC_API_KEY. Every number in the AI text is checked against the computed facts; lines that fail fall back to the template.")
         if not llm_available():
             st.caption("No API key found: explanations use the deterministic templates.")
@@ -211,38 +169,40 @@ def page_plan(run: Path, manifest: dict) -> None:
 
     st.title(PROJECT_NAME)
     st.caption("Open-to-buy gives you a budget. We tell you whether you can afford it, and how to spend it best.")
+    if b.policy == "C_plus":
+        POLICY_LABEL["C"] = "C+: cash gate + allocator (this plan)"
     data_banner(manifest, cfg)
 
     # ---- 2. safe budget ----
     if gate["status"] == "unconstrained":
-        st.subheader(f"Safe budget this week: {usd(gate['B'])} or more, at {conf:.0%} confidence")
-        st.success(f"Everything worth buying costs {usd(gate['B_max'])} and is cash-safe: {res['p_safe']:.0%} chance cash stays above the buffer over the next {H} weeks.")
+        st.subheader(md(f"Safe budget this week: {usd(gate['B'])} or more, at {conf:.0%} confidence"))
+        st.success(md(f"Everything worth buying costs {usd(gate['B_max'])} and is cash-safe: {res['p_safe']:.0%} chance cash stays above the buffer over the next {H} weeks."))
     elif gate["status"] == "constrained":
-        st.subheader(f"Safe budget this week: {usd(gate['B'])} at {conf:.0%} confidence")
-        st.warning(f"Buying everything worth buying would cost {usd(gate['B_max'])} and leave only a {1 - cmp_.loc['Everything', 'p_shortfall']:.0%} chance of staying above the buffer. The plan below spends {usd(cmp_.loc['C', 'spend'])} where each dollar earns the most.")
+        st.subheader(md(f"Safe budget this week: {usd(gate['B'])} at {conf:.0%} confidence"))
+        st.warning(md(f"Buying everything worth buying would cost {usd(gate['B_max'])} and leave only a {1 - cmp_.loc['Everything', 'p_shortfall']:.0%} chance of staying above the buffer. The plan below spends {usd(cmp_.loc['C', 'spend'])} where each dollar earns the most."))
     else:
-        st.subheader(f"Safe budget this week: {usd(gate['B'])}")
-        st.error(f"Cash at risk regardless of purchasing: even with no new orders the chance of staying above the buffer is {1 - cmp_.loc['Nothing', 'p_shortfall']:.0%}, below your {conf:.0%} target." + (" The plan shown is the best-effort variant." if fb == "best_effort" else " As specified, the gate returns a budget of zero in this case."))
+        st.subheader(md(f"Safe budget this week: {usd(gate['B'])}"))
+        st.error(md(f"Cash at risk regardless of purchasing: even with no new orders the chance of staying above the buffer is {1 - cmp_.loc['Nothing', 'p_shortfall']:.0%}, below your {conf:.0%} target." + (" The plan shown is the best-effort variant." if fb == "best_effort" else " As specified, the gate returns a budget of zero in this case.")))
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Cash in the bank", usd(res["cash_now"]))
     c2.metric("Plan spend", usd(cmp_.loc["C", "spend"]))
     c3.metric("Chance cash stays above buffer", f"{res['p_safe']:.0%}", help=f"Over the next {H} weeks, across {n_paths:,} simulated demand paths.")
     c4.metric("Supplier bills due this week", usd(float(res["payables"][0])))
     c5.metric("Fixed costs this week", usd(float(res["fixed"][0])))
-    st.write(res["summary"])
+    st.write(md(res["summary"]))
     st.caption(("AI-worded, numbers verified against computed facts." if res["summary_source"] == "llm" else "Deterministic template.") + (f" LLM error: {res['llm_error']}" if res["llm_error"] else "") + (f" {len(res['rejected'])} AI line(s) failed the number check and were replaced by templates." if res["rejected"] else ""))
 
     # ---- 1. fan chart ----
     st.subheader(f"Cash runway for this plan, next {H} weeks")
-    compare_on = st.toggle("Compare this week under policies A, B and D", value=False)
+    compare_on = st.toggle("Compare this week under policies A, B and D", value=st.query_params.get("compare") == "1")
     overlay = ["A", "B", "D"] if compare_on else ["Nothing", "Everything"]
     st.plotly_chart(fan_chart(res, buffer, overlay), width="stretch", config={"displayModeBar": False})
     lump = [f"week {j + 1} ({usd(v)})" for j, v in enumerate(res["fixed"]) if v > res["fixed"].min() + 1e-6]
-    st.caption(
+    st.caption(md(
         f"Bands show {n_paths:,} joint demand paths (SKUs move together as they did in past forecast errors). Later weeks assume routine one-for-one replenishment. "
         + (f"Heavier fixed-cost week: {', '.join(lump)}. " if lump else "")
         + f"If SKUs were sampled independently the same plan would look {res['p_safe_independent']:.0%} safe instead of {res['p_safe']:.0%}: independence understates risk."
-    )
+    ))
 
     # ---- 4. compare ----
     if compare_on:
@@ -250,17 +210,17 @@ def page_plan(run: Path, manifest: dict) -> None:
         rows = []
         for k in ("A", "B", "D", "C"):
             r = cmp_.loc[k]
-            rows.append({"Policy": POLICY_LABEL[k], "Total spend": r["spend"], "P(shortfall)": r["p_shortfall"], f"Expected margin, next {H} weeks": r["exp_margin"], "Cash in a bad case (5th pct low)": r["p05_min_cash"]})
+            rows.append({"Policy": POLICY_LABEL[k], "Total spend ($)": round(r["spend"]), "P(shortfall)": r["p_shortfall"], f"Expected margin, next {H} weeks ($)": round(r["exp_margin"]), "Lowest cash in a bad case, 5th pct ($)": round(r["p05_min_cash"])})
         st.dataframe(
             pd.DataFrame(rows), hide_index=True, width="stretch",
             column_config={
-                "Total spend": st.column_config.NumberColumn(format="dollar"),
+                "Total spend ($)": st.column_config.NumberColumn(format="localized"),
                 "P(shortfall)": st.column_config.ProgressColumn(format="percent", min_value=0.0, max_value=1.0),
-                f"Expected margin, next {H} weeks": st.column_config.NumberColumn(format="dollar"),
-                "Cash in a bad case (5th pct low)": st.column_config.NumberColumn(format="dollar"),
+                f"Expected margin, next {H} weeks ($)": st.column_config.NumberColumn(format="localized"),
+                "Lowest cash in a bad case, 5th pct ($)": st.column_config.NumberColumn(format="localized"),
             },
         )
-        st.caption(f"P(shortfall) = chance cash dips below the {usd(buffer)} buffer within {H} weeks. All four plans are evaluated on the same demand paths, from the same starting state. A, B and D do not look at cash.")
+        st.caption(md(f"P(shortfall) = chance cash dips below the {usd(buffer)} buffer within {H} weeks. All four plans are evaluated on the same demand paths, from the same starting state. A, B and D do not look at cash."))
 
     # ---- 3. buy / partial / defer ----
     st.subheader("What to buy, what to trim, what to defer")
@@ -279,8 +239,8 @@ def page_plan(run: Path, manifest: dict) -> None:
             "SKU": view["sku"],
             "Decision": view["decision"].map(DECISION_LABEL),
             "Qty": view["qty"],
-            "Spend": view["spend"],
-            "Cost of deferring": view["exp_margin_lost"],
+            "Spend ($)": view["spend"].round(0),
+            "Cost of deferring ($)": view["exp_margin_lost"].round(2),
             "Stockout probability": view["stockout_prob"],
             "Days of cover": view["days_cover"],
             "Why": view["reason"],
@@ -289,8 +249,8 @@ def page_plan(run: Path, manifest: dict) -> None:
     st.dataframe(
         table, hide_index=True, width="stretch", height=460,
         column_config={
-            "Spend": st.column_config.NumberColumn(format="dollar"),
-            "Cost of deferring": st.column_config.NumberColumn(format="dollar", help="Expected margin lost by not buying the newsvendor target this week."),
+            "Spend ($)": st.column_config.NumberColumn(format="localized"),
+            "Cost of deferring ($)": st.column_config.NumberColumn(format="%.2f", help="Expected margin lost by not buying the newsvendor target this week."),
             "Stockout probability": st.column_config.ProgressColumn(format="percent", min_value=0.0, max_value=1.0, help="Chance demand before the next delivery exceeds stock on hand, on order and bought now."),
             "Days of cover": st.column_config.NumberColumn(format="%.1f"),
             "Why": st.column_config.TextColumn(width="large"),
@@ -300,33 +260,33 @@ def page_plan(run: Path, manifest: dict) -> None:
 
 
 def page_backtest(run: Path, manifest: dict) -> None:
-    from render_results import build_blocks
-
     cfg = as_config(manifest["config"])
     st.title("Backtest: does it hold up?")
     data_banner(manifest, cfg)
-    blocks = build_blocks(run)
+    blocks = get_blocks(str(run))
     st.subheader("Headline")
-    st.markdown(blocks["headline"])
+    st.markdown(md(blocks["headline"]))
     st.caption("Every policy runs in the same simulated shop: same realised demand (actual weekly sales), same synthetic costs and terms, same forecasts. Intervals are paired block-bootstrap intervals over weeks.")
     st.subheader("All policies, headline scope")
-    st.markdown(blocks["results_table"])
+    st.markdown(md(blocks["results_table"]))
     figs = run / "figures"
     cols = st.columns(2)
     for i, name in enumerate(("shortfalls_by_stress.png", "margin_by_stress.png", "risk_return.png", "cash_paths.png", "ablation.png", "forecast_coverage.png", "forecast_wql.png")):
         if (figs / name).exists():
             cols[i % 2].image(str(figs / name), width="stretch")
     st.subheader("By budget stress")
-    st.markdown(blocks["stress_table"])
+    st.markdown(md(blocks["stress_table"]))
     st.subheader("By opening cash")
-    st.markdown(blocks["start_cash_table"])
+    st.markdown(md(blocks["start_cash_table"]))
+    st.subheader("C against B, stated plainly")
+    st.markdown(md(blocks["c_vs_b"]))
     st.subheader("How robust is the headline?")
-    st.markdown(blocks["robustness_table"])
-    st.caption(blocks["gate_diagnostics"])
+    st.markdown(md(blocks["robustness_table"]))
+    st.caption(md(blocks["gate_diagnostics"]))
     st.subheader("Forecast quality")
-    st.markdown(blocks["forecast_table"])
+    st.markdown(md(blocks["forecast_table"]))
     st.subheader("This run")
-    st.markdown(blocks["run_info"])
+    st.markdown(md(blocks["run_info"]))
 
 
 def page_about(run: Path, manifest: dict) -> None:
@@ -346,7 +306,7 @@ def page_about(run: Path, manifest: dict) -> None:
 """
     )
     st.subheader("Synthetic parameters used in this run")
-    st.markdown(synthetic_block(cfg))
+    st.markdown(md(synthetic_block(cfg)))
 
 
 def main() -> None:
@@ -357,7 +317,9 @@ def main() -> None:
         st.markdown("Put the three M5 files in `data/raw/`, then run:\n\n```bash\nmake all\nmake app\n```\n\nSee the README for the Kaggle download steps.")
         st.stop()
     manifest = get_manifest(str(run))
-    page = st.sidebar.radio("Page", ["This week's plan", "Backtest results", "About the data"], label_visibility="collapsed")
+    pages = ["This week's plan", "Backtest results", "About the data"]
+    wanted = {"plan": 0, "backtest": 1, "about": 2}.get(st.query_params.get("page", "plan"), 0)  # ?page=backtest (used for screenshots)
+    page = st.sidebar.radio("Page", pages, index=wanted, label_visibility="collapsed")
     if page == "This week's plan":
         if not (run / "app" / "bundle_meta.json").exists():
             st.error("This run has no app bundle (it was a partial run). Run `make backtest`.")

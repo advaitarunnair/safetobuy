@@ -20,6 +20,18 @@ funds any later chunk that still fits the leftover budget.
 
 P(D > x) comes from the joint demand sample paths (the same ones the cash
 simulation uses), summed over each SKU's cover period.
+
+Ranking (rank_by):
+  "cost"      : value / purchase cost. The formulation in the brief.
+  "committed" : value / (purchase cost + cost of the units expected to be left
+                unsold at the end of the cover period). A dollar spent on a unit
+                that does not sell stays tied up for another period, so under a
+                binding budget it is charged twice. This is the fixed point of
+                charging leftovers the shadow price of cash: fund a chunk iff
+                value - lambda * leftover_cost >= lambda * cost, i.e. iff
+                value / (cost + leftover_cost) >= lambda. It only changes the
+                ORDER in which units are funded, never which units are worth
+                buying, so the unconstrained plan is identical.
 """
 from __future__ import annotations
 
@@ -58,15 +70,22 @@ def cover_demand(paths: np.ndarray, cover_weeks: np.ndarray) -> np.ndarray:
     return np.take_along_axis(cum, idx[None, :, None], axis=2)[:, :, 0]
 
 
+def survival(sorted_cover: np.ndarray, x0: int, n_units: int) -> np.ndarray:
+    """P(D > x) for x = x0 .. x0 + n_units - 1 given sorted demand samples."""
+    xs = np.arange(x0, x0 + n_units)
+    return 1.0 - np.searchsorted(sorted_cover, xs, side="right") / len(sorted_cover)
+
+
 def marginal_values(sorted_cover: np.ndarray, x0: int, n_units: int, cu: float, co: float) -> np.ndarray:
     """MV of units x0+1 .. x0+n_units given sorted demand samples."""
-    xs = np.arange(x0, x0 + n_units)
-    surv = 1.0 - np.searchsorted(sorted_cover, xs, side="right") / len(sorted_cover)
+    surv = survival(sorted_cover, x0, n_units)
     return cu * surv - co * (1.0 - surv)
 
 
-def build_chunks(cover: np.ndarray, position: np.ndarray, unit_cost: np.ndarray, cu: np.ndarray, co: np.ndarray, pack: np.ndarray, moq: np.ndarray) -> ChunkTable:
-    """Enumerate every positive-value chunk for every SKU and sort by value per dollar."""
+def build_chunks(cover: np.ndarray, position: np.ndarray, unit_cost: np.ndarray, cu: np.ndarray, co: np.ndarray, pack: np.ndarray, moq: np.ndarray, rank_by: str = "cost") -> ChunkTable:
+    """Enumerate every positive-value chunk for every SKU and sort by value per dollar (see rank_by)."""
+    if rank_by not in ("cost", "committed"):
+        raise ValueError(f"unknown rank_by '{rank_by}'")
     n = cover.shape[1]
     position = np.asarray(np.rint(position), dtype=np.int64)
     srt = np.sort(cover, axis=0)
@@ -77,7 +96,8 @@ def build_chunks(cover: np.ndarray, position: np.ndarray, unit_cost: np.ndarray,
         x_max = int(np.ceil(srt[-1, i]))
         if cu[i] <= 0 or x_max <= x0:
             continue
-        mv = marginal_values(srt[:, i], x0, x_max - x0, float(cu[i]), float(co[i]))
+        surv = survival(srt[:, i], x0, x_max - x0)
+        mv = float(cu[i]) * surv - float(co[i]) * (1.0 - surv)
         n_pos = int((mv > 0).sum())
         if n_pos == 0:
             continue
@@ -86,9 +106,13 @@ def build_chunks(cover: np.ndarray, position: np.ndarray, unit_cost: np.ndarray,
         ends = first + pk * np.arange(n_chunks)
         starts = np.concatenate([[0], ends[:-1]])
         if ends[-1] > mv.size:  # units beyond the largest sampled demand never sell
-            mv = np.concatenate([mv, np.full(ends[-1] - mv.size, -float(co[i]))])
+            pad = ends[-1] - mv.size
+            mv = np.concatenate([mv, np.full(pad, -float(co[i]))])
+            surv = np.concatenate([surv, np.zeros(pad)])
         csum = np.concatenate([[0.0], np.cumsum(mv)])
         vals = csum[ends] - csum[starts]
+        lsum = np.concatenate([[0.0], np.cumsum(1.0 - surv)])
+        left = lsum[ends] - lsum[starts]  # expected unsold units in each chunk
         pos = vals > 1e-12
         n_keep = int(pos.size if pos.all() else np.argmin(pos))
         if n_keep == 0:
@@ -99,7 +123,8 @@ def build_chunks(cover: np.ndarray, position: np.ndarray, unit_cost: np.ndarray,
         c_val.append(vals[:n_keep])
         # Sort key: density made exactly non-increasing within the SKU, so floating-point
         # ties (e.g. a 2-unit MOQ chunk vs. the single units after it) can never reorder a SKU's chunks.
-        c_key.append(np.minimum.accumulate(vals[:n_keep] / (sizes * float(unit_cost[i]))))
+        capital = sizes * float(unit_cost[i]) + (left[:n_keep] * float(unit_cost[i]) if rank_by == "committed" else 0.0)
+        c_key.append(np.minimum.accumulate(vals[:n_keep] / capital))
         target[i] = int(ends[n_keep - 1])
 
     if c_sku:

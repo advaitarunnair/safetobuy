@@ -27,7 +27,7 @@ POLICY_LABEL = {
     "B": "B open-to-buy",
     "C": "C cash gate + allocator",
     "D": "D OTB + priority cuts",
-    "C_plus": "C+ best-effort fallback",
+    "C_plus": "C+ capital-aware, best effort",
     "C_gate_prop": "gate + proportional split",
     "OTB_marginal": "OTB + allocator",
 }

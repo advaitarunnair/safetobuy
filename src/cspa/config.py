@@ -167,6 +167,7 @@ _RULES: dict[str, Any] = {
     "gate.mode": _choice("mc", "deterministic"),
     "gate.deterministic_quantile": _choice(*QUANTILES),
     "gate.continuation": _choice("replace_sales", "none"),
+    "gate.charge_beyond_horizon": _choice(True, False),
     "gate.tol_frac": _num(0, 0.5, lo_open=True),
     "gate.tol_abs": _num(0, None),
     "gate.max_bisection_iter": _num(1, 60, integer=True),
@@ -174,7 +175,7 @@ _RULES: dict[str, Any] = {
     "gate.on_infeasible": _choice("zero", "best_effort"),
     "allocator.perishable_overage": _choice("spoilage", "full_loss"),
     "policies.reorder_point.z": _num(0, 6),
-    "policies.otb.target_weeks_cover": _num(0, 26),
+    "policies.otb.target_weeks_cover": lambda v: None if v == "auto" else _num(0, 26)(v),
     "policies.otb.planned_markdowns": _num(0, None),
     "world.shortfall_rule": _choice("overdraft", "cut_proportional"),
     "llm.enabled": _choice(True, False),
@@ -232,6 +233,13 @@ def validate_config(cfg: dict) -> None:
     if isinstance(lts, list) and lts and all(isinstance(x, int) for x in lts) and isinstance(fh, int) and isinstance(review, int):
         if max(lts) + review > fh:
             errors.append(f"horizons.forecast_horizon_weeks ({fh}) must cover max lead time + review period ({max(lts) + review})")
+    delays = [x["pay_delay_weeks"] for x in sup if isinstance(x, dict) and isinstance(x.get("pay_delay_weeks"), int)] if isinstance(sup, list) else []
+    if isinstance(lts, list) and lts and all(isinstance(x, int) for x in lts) and delays and isinstance(ch, int) and not safe("gate.charge_beyond_horizon", False):
+        if max(lts) + max(delays) >= ch:
+            errors.append(
+                f"horizons.cash_horizon_weeks ({ch}) must exceed max lead time + max payment delay ({max(lts) + max(delays)}): otherwise "
+                "bills for this week's order fall outside the projection and buying on credit looks free. Lengthen the horizons, shorten the terms, or set gate.charge_beyond_horizon: true"
+            )
     if isinstance(fh, int) and isinstance(ch, int) and ch > fh:
         errors.append("horizons.cash_horizon_weeks must be <= horizons.forecast_horizon_weeks")
     if isinstance(safe("sampling.block_len"), int) and isinstance(fh, int) and safe("sampling.block_len") > fh:
@@ -287,6 +295,8 @@ def validate_experiments(exp: dict) -> None:
     ab = exp.get("app_bundle", {})
     if isinstance(wins, list) and ab.get("window") not in [w.get("name") for w in wins if isinstance(w, dict)]:
         errors.append("app_bundle.window: must name one of the windows")
+    if ab.get("policy", "C") not in ("C", "C_plus") or (isinstance(pols, list) and ab.get("policy", "C") not in pols):
+        errors.append("app_bundle.policy: must be C or C_plus, and be one of the policies being run")
     if not isinstance(exp.get("n_jobs"), int) or exp["n_jobs"] < 1:
         errors.append("n_jobs: must be an integer >= 1")
     if errors:

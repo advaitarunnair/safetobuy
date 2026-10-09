@@ -21,6 +21,14 @@ horizon it needs an assumption about future orders:
       looks unsafe. Kept for comparison and tests only.
 
 Future orders are still re-decided, and re-gated, when their week arrives.
+
+Bills beyond the horizon. If part of the candidate plan fell due after the last
+projected week, buying on those terms would look free to the gate. The config
+validator therefore requires every bill of this week's order to fall inside the
+cash horizon (max lead time + max payment delay < horizon). The alternative,
+charge_beyond_horizon=True, counts such bills in the last projected week; it is
+available but double-counts against older bills still in the pipeline, so it is
+pessimistic for a shop in steady state.
 """
 from __future__ import annotations
 
@@ -57,6 +65,7 @@ def simulate_cash(
     params: SkuParams,
     fixed_costs: np.ndarray,
     continuation: str = "replace_sales",
+    charge_beyond_horizon: bool = False,
 ) -> CashPaths:
     """Project cash over H weeks. demand_paths [n_paths, n_skus, H]; fixed_costs [H]."""
     if continuation not in ("replace_sales", "none"):
@@ -71,9 +80,12 @@ def simulate_cash(
     k = min(H, len(state.payables))
     pay[:, :k] = state.payables[:k]
     due = params.lead_time + params.pay_delay
-    inside = due < H
     plan_due = np.zeros(H)
-    np.add.at(plan_due, due[inside], (plan * c)[inside])
+    if charge_beyond_horizon:
+        np.add.at(plan_due, np.minimum(due, H - 1), plan * c)
+    else:
+        inside = due < H
+        np.add.at(plan_due, due[inside], (plan * c)[inside])
     pay += plan_due[None, :]
 
     follow = continuation == "replace_sales"

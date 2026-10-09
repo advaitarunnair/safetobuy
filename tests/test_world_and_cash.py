@@ -120,7 +120,7 @@ def test_cash_projection_matches_the_world_on_a_known_demand_path(panel, params)
     fixed = np.array([300.0, 300.0, 900.0, 300.0])
     price = np.where(np.isnan(panel.price[start - 1]), p.ref_price, panel.price[start - 1])
     demand = panel.units[start : start + H]
-    proj = simulate_cash(state, plan, demand.T[None, :, :], price, p, fixed, continuation="none")
+    proj = simulate_cash(state, plan, demand.T[None, :, :], price, p, fixed, continuation="none", charge_beyond_horizon=False)
     st, cash = state.copy(), []
     for j in range(H):
         order = plan if j == 0 else np.zeros(p.n, dtype=np.int64)
@@ -128,6 +128,30 @@ def test_cash_projection_matches_the_world_on_a_known_demand_path(panel, params)
         cash.append(rec["cash_end"])
     assert np.allclose(proj.cash[0], cash)
     assert proj.min_cash[0] == pytest.approx(min(cash)) and proj.plan_cost == pytest.approx(float(plan @ p.unit_cost))
+
+
+def test_late_bills_option_and_validation(week_setup, overrides):
+    """Terms that reach past the horizon are rejected by the config, or charged in its last week on request."""
+    import copy
+
+    from cspa.config import ConfigError, deep_merge, load_config
+
+    net30 = {"synthetic": {"suppliers": [{"name": "S_net30", "share": 1.0, "pay_delay_weeks": 4}]}}
+    with pytest.raises(ConfigError, match="buying on credit looks free"):
+        load_config(overrides=deep_merge(overrides, net30))
+    load_config(overrides=deep_merge(overrides, deep_merge(net30, {"gate": {"charge_beyond_horizon": True}})))
+
+    state, info = week_setup
+    p, H = copy.deepcopy(info.params), info.demand_paths.shape[2]
+    p.pay_delay = p.pay_delay + 4  # every bill of this week's order now falls after the horizon
+    plan = p.moq * 3
+    st = state.copy()
+    st.payables = np.zeros(int((p.lead_time + p.pay_delay).max()) + 1)
+    args = (st, plan, info.demand_paths, info.price, p, info.fixed_costs)
+    ignored = simulate_cash(*args, continuation="none", charge_beyond_horizon=False)
+    charged = simulate_cash(*args, continuation="none", charge_beyond_horizon=True)
+    assert np.allclose(charged.cash[:, :-1], ignored.cash[:, :-1])
+    assert np.allclose(ignored.cash[:, -1] - charged.cash[:, -1], float(plan @ p.unit_cost))
 
 
 def test_continuation_keeps_revenue_flowing(week_setup):

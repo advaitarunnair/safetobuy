@@ -30,16 +30,17 @@ POLICY_NAME = {
     "B": "B: open-to-buy, proportional split",
     "D": "D: open-to-buy, priority cuts",
     "C": "**C: cash gate + marginal allocator (proposed)**",
-    "C_plus": "C+: C with best-effort fallback",
+    "C_plus": "C+: C with capital-aware ranking and best-effort fallback",
     "C_gate_prop": "ablation: cash gate + proportional split",
     "OTB_marginal": "ablation: OTB budget + marginal allocator",
 }
 PENDING = "_No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._"
 
 
-def md_table(df: pd.DataFrame) -> str:
+def md_table(df: pd.DataFrame, numeric: bool = True) -> str:
+    """Markdown table. numeric=True right-aligns every column after the first."""
     head = "| " + " | ".join(df.columns) + " |"
-    sep = "|" + "|".join(" --- " if i == 0 else " ---: " for i in range(len(df.columns))) + "|"
+    sep = "|" + "|".join(" --- " if i == 0 or not numeric else " ---: " for i in range(len(df.columns))) + "|"
     rows = ["| " + " | ".join(str(v) for v in r) + " |" for r in df.itertuples(index=False)]
     return "\n".join([head, sep, *rows])
 
@@ -111,10 +112,70 @@ def synthetic_block(cfg) -> str:
         ("Opening stock, pipeline, payables", f"whatever policy A leaves after a {syn.burn_in_weeks}-week burn-in with ample cash", "synthetic.burn_in_weeks"),
         ("Seed", f"{cfg.seed}", "seed"),
     ]
-    return md_table(pd.DataFrame(rows, columns=["Parameter", "Value", "Config key"]))
+    return md_table(pd.DataFrame(rows, columns=["Parameter", "Value", "Config key"]), numeric=False)
 
 
-def build_blocks(run: Path) -> dict[str, str]:
+def c_vs_b_block(hl: dict, exp) -> str:
+    """Plain statement of how C compared with B, generated from the run."""
+    lines = []
+    roles = "+".join(exp.headline.roles)
+    named = [(f"{roles} windows, rule `{r}`", h) for r, h in (hl.get("by_rule") or {}).items()]
+    named += [(f"{role} windows (used for tuning), rule `{exp.headline.shortfall_rule}`", h) for role, h in (hl.get("other_roles") or {}).items()]
+    for label, h in named:
+        if not h:
+            continue
+        y, sf, gm = h["y_pct_margin_vs_B"], h["shortfall_weeks"], h["gross_margin"]
+        verdict = "higher" if y > 0 else "lower"
+        ci = h.get("y_ci")
+        clear = "the interval excludes zero" if ci and (ci[0] > 0 or ci[1] < 0) else "the interval includes zero, so the margin difference is not clear"
+        lines.append(
+            f"- **{label}:** C's gross margin was {abs(y):.1f}% {verdict} than B's ({usd(gm['C'])} vs {usd(gm['B'])}; {h['ci_level']:.0%} interval {ci_txt(h, 'y_ci')}; {clear}). "
+            f"Shortfall weeks: C {sf['C']}, B {sf['B']}, A {sf['A']}. Insolvency weeks: C {h['insolvency_weeks']['C']}, B {h['insolvency_weeks']['B']}, A {h['insolvency_weeks']['A']}."
+        )
+    v = hl.get("variant_C_plus")
+    if v:
+        lines.append(f"- **C+ instead of C (same scope as the headline):** margin {v['y_pct_margin_vs_B']:+.1f}% vs B, shortfall weeks C+ {v['shortfall_weeks']['C']}, B {v['shortfall_weeks']['B']}, A {v['shortfall_weeks']['A']}.")
+    return "\n".join(lines) if lines else PENDING
+
+
+def demo_block(run: Path, cfg, exp) -> dict[str, str]:
+    """Pick the demo week from the app bundle and quote its numbers at the app's default settings."""
+    from cspa.sim.bundle import load_bundle
+    from cspa.sim.weekplan import compute_week_plan, default_buffer, default_fallback
+
+    if not (run / "app" / "bundle_meta.json").exists():
+        return {"demo_week": PENDING, "demo_figure": PENDING}
+    b = load_bundle(run / "app")
+    scen = next((s for s in b.meta["scenarios"] if s["stress"] == float(exp.default_stress)), b.meta["scenarios"][0])
+    sid, cal = scen["scenario"], b.cal(scen["scenario"])
+    alpha, buf, n_paths, fb = float(cfg.risk.alpha), default_buffer(cal), int(cfg.sampling.n_paths_app), default_fallback(b)
+    best = None
+    for i, week in enumerate(scen["weeks"]):
+        res = compute_week_plan(b, sid, int(week), alpha, buf, n_paths, fb)
+        g = res["gate"]
+        if g["status"] == "constrained":
+            gap = g["B_max"] - g["B"]
+            if best is None or gap > best[0]:
+                best = (gap, i, week, res)
+    if best is None:
+        txt = f"No week in the bundled scenario (stress {int(round(scen['stress'] * 100))}%) has a binding cash gate at default settings, so there is no constrained week to demo. Lower the risk-tolerance slider or raise the buffer in the app to show the gate binding."
+        return {"demo_week": txt, "demo_figure": txt}
+    _, i, week, res = best
+    w, cmp_ = res["facts"]["week"]["fmt"], res["compare"].set_index("plan")
+    date = pd.Timestamp(b.panel.weeks["start_date"].iloc[week]).date()
+    figure = f"{w['cash']} in the bank, and everything worth buying this week costs {w['full_cost']}. The safe budget is {w['budget']}."
+    txt = (
+        f"In the app choose **Budget stress {int(round(scen['stress'] * 100))}%** and **decision week {i + 1}** ({date}), default sliders. "
+        f"The shop has {w['cash']} in the bank against a {w['buffer']} buffer. Everything worth buying costs {w['full_cost']}, which would leave only a "
+        f"{w['prob_safe_full']} chance of staying above the buffer. The safe budget at {w['target']} confidence is {w['budget']}; the plan spends {w['spend']}: "
+        f"{w['n_full']} items in full, {w['n_partial']} in part, {w['n_defer']} deferred, at an expected cost of {w['deferred_loss']} in margin. "
+        f"For comparison, policy A would spend {usd(cmp_.loc['A', 'spend'])} with a {cmp_.loc['A', 'p_shortfall']:.0%} chance of a shortfall, "
+        f"and policy B {usd(cmp_.loc['B', 'spend'])} with {cmp_.loc['B', 'p_shortfall']:.0%}."
+    )
+    return {"demo_week": txt, "demo_figure": figure}
+
+
+def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
     manifest = json.loads((run / "manifest.json").read_text())
     cfg, exp = as_config(manifest["config"]), as_config(manifest["experiments"])
     hl = json.loads((run / "headline.json").read_text())
@@ -159,7 +220,7 @@ def build_blocks(run: Path) -> dict[str, str]:
     named += [(f"{role} windows (used for tuning), rule {exp.headline.shortfall_rule}", h) for role, h in (hl.get("other_roles") or {}).items()]
     named += [(f"Window {w} only", h) for w, h in (hl.get("by_window") or {}).items()]
     named += [(f"Stress {int(round(float(s) * 100))}% only", h) for s, h in (hl.get("by_stress") or {}).items()]
-    named += [("C replaced by C+ (best-effort fallback)", hl.get("variant_C_plus"))]
+    named += [("C replaced by the C+ variant", hl.get("variant_C_plus"))]
     blocks["robustness_table"] = headline_rows(named)
 
     fe = run / "forecast_eval.csv"
@@ -199,15 +260,19 @@ def build_blocks(run: Path) -> dict[str, str]:
                 ("Policy fairness check", manifest["fairness_check"]),
             ],
             columns=["Item", "Value"],
-        )
+        ),
+        numeric=False,
     )
     blocks["synthetic_params"] = synthetic_block(cfg)
+    blocks["c_vs_b"] = c_vs_b_block(hl, exp)
+    if include_demo:  # recomputes every bundled week, so the app skips it
+        blocks.update(demo_block(run, cfg, exp))
     blocks["figures"] = "\n".join(f"![{f.stem}](results/{run.name}/figures/{f.name})" for f in sorted((run / "figures").glob("*.png"))) if (run / "figures").exists() else PENDING
     return blocks
 
 
 def placeholder_blocks(cfg) -> dict[str, str]:
-    keys = ["headline", "headline_plain", "results_table", "stress_table", "start_cash_table", "robustness_table", "forecast_table", "gate_diagnostics", "run_info", "figures"]
+    keys = ["headline", "headline_plain", "results_table", "stress_table", "start_cash_table", "robustness_table", "forecast_table", "gate_diagnostics", "run_info", "figures", "c_vs_b", "demo_week", "demo_figure"]
     out = {k: PENDING for k in keys}
     out["project_name"] = cfg.project.name
     out["synthetic_params"] = synthetic_block(cfg)

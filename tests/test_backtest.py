@@ -107,6 +107,26 @@ def test_metrics_match_the_weekly_records(result):
     assert set(pooled["policy"]) == set(POLICY_NAMES)
 
 
+def test_open_to_buy_budget_follows_its_formula(week_setup, overrides):
+    from cspa.config import load_config
+    from cspa.policies import PlanContext
+
+    state, info = week_setup
+    ctx = PlanContext(state, info)
+    p = info.params
+    z = info.cfg.policies.reorder_point.z
+    # auto: planned ending stock equals policy A's total safety stock at cost
+    assert ctx.otb_weeks_cover * float(ctx.weekly @ p.unit_cost) == pytest.approx(z * float(ctx.sigma @ p.unit_cost))
+    expect = max(0.0, float((ctx.mu + ctx.otb_weeks_cover * ctx.weekly - state.inventory_position()) @ p.unit_cost))
+    assert ctx.otb_budget == pytest.approx(expect)
+    b = make_policy("B").decide(state, info)
+    assert b.meta["plan_cost"] <= ctx.otb_budget + 1e-6 and (b.qty <= ctx.need).all()  # a cap, never more than the need
+    d = make_policy("D").decide(state, info)
+    assert d.meta["plan_cost"] <= ctx.otb_budget + 1e-6 and (d.qty <= ctx.need).all()
+    info.cfg = load_config(overrides=deep_merge(overrides, {"policies": {"otb": {"target_weeks_cover": 2.5}}}))
+    assert PlanContext(state, info).otb_weeks_cover == 2.5
+
+
 def fake_weekly(sf: dict, gm: dict, weeks: int = 12) -> pd.DataFrame:
     rows = []
     for pol in ("A", "B", "C"):
@@ -163,6 +183,20 @@ def test_app_bundle_reproduces_the_backtest_decision(result, panel, params, cach
         assert state.cash == pytest.approx(row["cash_start"])
     size = sum(f.stat().st_size for f in (tmp_path / "app").iterdir())
     assert size < 5_000_000
+
+
+def test_app_bundle_can_replay_c_plus(panel, params, cache, cfg, scenario, tmp_path):
+    from cspa.sim.weekplan import compute_week_plan, default_buffer, default_fallback
+
+    res = run_scenario(panel, params, cache, cfg, scenario, ["A", "B", "C_plus"], capture_policy="C_plus")
+    write_bundle(tmp_path / "app", panel, params, cache, cfg, [res], "test_run", "C_plus")
+    b = load_bundle(tmp_path / "app")
+    assert b.policy == "C_plus" and default_fallback(b) == "best_effort"
+    week = scenario.window.start + 2
+    plan = compute_week_plan(b, scenario.id, week, float(cfg.risk.alpha), b.cal(scenario.id).buffer, int(cfg.sampling.n_paths_backtest), default_fallback(b))
+    row = res["weekly"][(res["weekly"]["policy"] == "C_plus") & (res["weekly"]["week"] == week)].iloc[0]
+    assert float(plan["report"]["spend"].sum()) == pytest.approx(row["order_cost_requested"])
+    assert default_buffer(b.cal(scenario.id)) > 0 and set(plan["compare"]["plan"]) == {"C", "Nothing", "Everything", "A", "B", "D"}
 
 
 def test_scripts_end_to_end_on_the_fixture(pipeline, cfg):

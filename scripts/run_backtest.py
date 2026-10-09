@@ -37,7 +37,7 @@ def _init(cfg_plain: dict) -> None:
 
 def _work(job: tuple) -> dict:
     scenario, policies, capture = job
-    res = run_scenario(_G["panel"], _G["params"], _G["cache"], _G["cfg"], scenario, policies, capture_policy="C" if capture else None)
+    res = run_scenario(_G["panel"], _G["params"], _G["cache"], _G["cfg"], scenario, policies, capture_policy=capture)
     res.pop("start_state")
     return res
 
@@ -87,7 +87,8 @@ def main() -> None:
     chash = config_hash(cfg, exp)
     run_id = dt.datetime.now().strftime("%Y%m%d-%H%M%S") + f"_{chash[:8]}" + (f"_{args.tag}" if args.tag else ("_tune" if args.tune_only else "_quick" if args.quick else ""))
     out = results_root() / run_id
-    jobs = [(s, policies, (not partial) and "C" in policies and _is_bundle(s, exp)) for s in grid]
+    bundle_policy = str(exp.app_bundle.get("policy", "C"))
+    jobs = [(s, policies, bundle_policy if (not partial) and bundle_policy in policies and _is_bundle(s, exp) else None) for s in grid]
     n_jobs = max(1, min(int(args.jobs or exp.n_jobs), len(jobs)))
     print(f"run {run_id}: {len(jobs)} scenarios x {len(policies)} policies, forecaster '{model}', {n_jobs} worker(s)")
 
@@ -124,7 +125,7 @@ def main() -> None:
             shutil.copy(proc / f, out / f)
     bundle_runs = [r for r, j in zip(results, jobs) if j[2]]
     if bundle_runs:
-        write_bundle(out / "app", panel, params, cache, cfg, bundle_runs, run_id)
+        write_bundle(out / "app", panel, params, cache, cfg, bundle_runs, run_id, bundle_policy)
 
     c_rows = metrics[metrics["policy"] == "C"]
     manifest = {

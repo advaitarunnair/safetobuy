@@ -10,7 +10,7 @@ ARGS = --config $(CONFIG) --experiments $(EXPERIMENTS)
 OMP_DIR := $(shell $(PY) -c "import importlib.util as u, pathlib as p; s = u.find_spec('sklearn'); print(p.Path(s.origin).parent / '.dylibs' if s else '')" 2>/dev/null)
 RUN = DYLD_FALLBACK_LIBRARY_PATH="$(OMP_DIR):/usr/local/lib:/usr/lib" PYTHONPATH=src $(PY)
 
-.PHONY: help setup data forecast quick tune backtest figures render placeholder app test all clean
+.PHONY: help setup data forecast quick tune sweep backtest figures render placeholder screenshots architecture app test all clean
 
 help:
 	@echo "make setup      create .venv and install pinned requirements (Python 3.11)"
@@ -18,9 +18,11 @@ help:
 	@echo "make forecast   Phase 2: rolling-origin quantile forecasts + evaluation (cached)"
 	@echo "make quick      Phase 1: one window, policies A and B only"
 	@echo "make tune       backtest on tuning windows only (never touches holdout)"
+	@echo "make sweep      sensitivity sweep on tuning windows, e.g. make sweep SET='--set risk.alpha=0.05,0.10'"
 	@echo "make backtest   full backtest grid -> results/<run_id>/"
 	@echo "make figures    PNG figures from the latest run"
 	@echo "make render     fill README / docs result blocks from the latest run"
+	@echo "make screenshots  app screenshots into docs/screenshots/ (headless Chrome)"
 	@echo "make app        start the Streamlit app"
 	@echo "make test       run the test-suite (synthetic fixture only)"
 	@echo "make all        data forecast backtest figures render"
@@ -43,6 +45,9 @@ quick:
 tune:
 	$(RUN) scripts/run_backtest.py $(ARGS) --tune-only
 
+sweep:
+	$(RUN) scripts/tune_sweep.py $(ARGS) $(SET)
+
 backtest:
 	$(RUN) scripts/run_backtest.py $(ARGS)
 
@@ -54,6 +59,12 @@ render:
 
 placeholder:
 	$(RUN) scripts/render_results.py --placeholder
+
+screenshots:
+	$(RUN) scripts/capture_screenshots.py --query "$(QUERY)"
+
+architecture:
+	$(RUN) scripts/make_architecture.py
 
 app:
 	$(RUN) -m streamlit run app/streamlit_app.py

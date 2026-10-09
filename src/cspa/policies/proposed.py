@@ -23,15 +23,20 @@ class GateProportionalPolicy(Policy):
 
 
 class ProposedPlusPolicy(Policy):
-    """Variant of C that differs only when the gate finds no safe budget at all.
+    """C+ : policy C with two changes, both found while verifying the specified design.
 
-    C as specified then buys nothing. This variant instead buys the plan that gets
-    closest to safety (see cash/gate.py, "best_effort"). It is reported next to C,
-    never in place of it.
+    1. Ranking. Units are funded by expected profit per dollar of capital committed
+       (purchase cost plus the cost of units expected to be left unsold), instead of per
+       dollar of purchase cost alone. Under a binding budget the specified ranking funds
+       high-margin units that may well not sell ahead of low-margin units that surely will.
+    2. Fallback. When no budget is safe, C buys nothing. C+ buys the plan that gets
+       closest to safety (see cash/gate.py, "best_effort").
+
+    C+ is reported next to C, never in place of it.
     """
 
     name = "C_plus"
-    label = "C+ (C with best-effort fallback)"
+    label = "C+ (capital-aware ranking, best-effort fallback)"
     budget_rule = "gate"
-    alloc_rule = "marginal"
+    alloc_rule = "marginal_committed"
     on_infeasible = "best_effort"

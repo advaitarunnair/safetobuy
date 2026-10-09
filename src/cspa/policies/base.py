@@ -9,7 +9,7 @@ Every policy is a (budget rule, allocation rule) pair:
     D              open-to-buy     full need in priority order
     C_gate_prop    cash gate       proportional to A's need     (ablation)
     OTB_marginal   open-to-buy     marginal value per dollar    (ablation)
-    C_plus         cash gate       marginal value per dollar    (variant: best-effort fallback)
+    C_plus         cash gate       value per dollar committed   (variant: capital-aware ranking + best-effort fallback)
 """
 from __future__ import annotations
 
@@ -100,12 +100,24 @@ class PlanContext:
         return self.need * self.p.unit_cost
 
     @cached_property
+    def otb_weeks_cover(self) -> float:
+        """Planned end-of-period stock, in weeks of planned sales. 'auto' matches policy A's total
+        safety stock at cost, so A and B aim for the same amount of stock and differ only in how:
+        A per SKU, B as one budget."""
+        w = self.info.cfg.policies.otb.target_weeks_cover
+        if w != "auto":
+            return float(w)
+        z = float(self.info.cfg.policies.reorder_point.z)
+        denom = float(self.weekly @ self.p.unit_cost)
+        return float(z * (self.sigma @ self.p.unit_cost) / denom) if denom > 0 else 0.0
+
+    @cached_property
     def otb_budget(self) -> float:
         """Open-to-buy at cost:
         planned sales + planned markdowns + planned end-of-period stock - beginning stock - on order."""
         otb = self.info.cfg.policies.otb
         planned_sales = self.mu
-        planned_end = float(otb.target_weeks_cover) * self.weekly
+        planned_end = self.otb_weeks_cover * self.weekly
         units = planned_sales + planned_end - self.position  # position = on hand + on order
         return max(0.0, float(units @ self.p.unit_cost) + float(otb.planned_markdowns))
 
@@ -114,12 +126,17 @@ class PlanContext:
         return build_chunks(self.info.cover, self.position, self.p.unit_cost, self.cu, self.co, self.p.pack_size, self.p.moq)
 
     @cached_property
+    def table_committed(self) -> ChunkTable:
+        """Same chunks as `table`, ranked by profit per dollar of capital committed (see allocate/marginal.py)."""
+        return build_chunks(self.info.cover, self.position, self.p.unit_cost, self.cu, self.co, self.p.pack_size, self.p.moq, rank_by="committed")
+
+    @cached_property
     def stockout_prob_now(self) -> np.ndarray:
         """P(demand over the cover period exceeds the current inventory position)."""
         return (self.info.cover > self.position[None, :]).mean(axis=0)
 
     def simulate(self, qty: np.ndarray, paths: np.ndarray | None = None) -> CashPaths:
-        return simulate_cash(self.state, qty, self.info.sim_paths if paths is None else paths, self.info.price, self.p, self.info.fixed_costs, str(self.info.cfg.gate.continuation))
+        return simulate_cash(self.state, qty, self.info.sim_paths if paths is None else paths, self.info.price, self.p, self.info.fixed_costs, str(self.info.cfg.gate.continuation), bool(self.info.cfg.gate.charge_beyond_horizon))
 
     # ---- allocation rules: budget -> whole units per SKU ----
     def alloc_need(self) -> Callable[[float], np.ndarray]:
@@ -157,8 +174,12 @@ class PlanContext:
     def alloc_marginal(self) -> Callable[[float], np.ndarray]:
         return lambda B: allocate(self.table, B)
 
+    def alloc_marginal_committed(self) -> Callable[[float], np.ndarray]:
+        return lambda B: allocate(self.table_committed, B)
+
     def allocator(self, rule: str) -> Callable[[float], np.ndarray]:
-        return {"need": self.alloc_need, "proportional": self.alloc_proportional, "priority": self.alloc_priority, "marginal": self.alloc_marginal}[rule]()
+        rules = {"need": self.alloc_need, "proportional": self.alloc_proportional, "priority": self.alloc_priority, "marginal": self.alloc_marginal, "marginal_committed": self.alloc_marginal_committed}
+        return rules[rule]()
 
     # ---- budget rules ----
     def gate(self, alloc: Callable[[float], np.ndarray], alpha: float | None = None, buffer: float | None = None, on_infeasible: str | None = None) -> BudgetResult:
@@ -192,7 +213,7 @@ class Policy:
     name = "base"
     label = ""
     budget_rule = "none"  # none | otb | gate
-    alloc_rule = "need"  # need | proportional | priority | marginal
+    alloc_rule = "need"  # need | proportional | priority | marginal | marginal_committed
     on_infeasible: str | None = None  # None = use gate.on_infeasible from config
 
     def decide(self, state: WorldState, info: InfoSet) -> Orders:

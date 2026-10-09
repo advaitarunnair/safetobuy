@@ -24,8 +24,8 @@ from cspa.sim.world import WorldState
 HISTORY_WEEKS = 60
 
 
-def write_bundle(out_dir: Path, panel: Panel, params: SkuParams, cache: ForecastCache, cfg, runs: list[dict], run_id: str) -> None:
-    """runs: outputs of run_scenario(..., capture_policy='C') for the bundle scenarios."""
+def write_bundle(out_dir: Path, panel: Panel, params: SkuParams, cache: ForecastCache, cfg, runs: list[dict], run_id: str, policy: str = "C") -> None:
+    """runs: outputs of run_scenario(..., capture_policy=policy) for the bundle scenarios."""
     out_dir.mkdir(parents=True, exist_ok=True)
     H = int(cfg.horizons.forecast_horizon_weeks)
     first_week = min(c["week"] for r in runs for c in r["captured"])
@@ -54,6 +54,7 @@ def write_bundle(out_dir: Path, panel: Panel, params: SkuParams, cache: Forecast
     np.savez_compressed(out_dir / "states.npz", **arrays)
     meta = {
         "run_id": run_id,
+        "policy": policy,
         "data_source": panel.meta.get("data_source"),
         "first_history_week": int(lo_hist),
         "scenarios": scen_meta,
@@ -70,6 +71,11 @@ class Bundle:
     params: SkuParams
     cache: ForecastCache
     states: dict
+
+    @property
+    def policy(self) -> str:
+        """The policy whose week-by-week states this bundle holds (C or C_plus)."""
+        return str(self.meta.get("policy", "C"))
 
     def scenario(self, sid: str) -> dict:
         return next(s for s in self.meta["scenarios"] if s["scenario"] == sid)
