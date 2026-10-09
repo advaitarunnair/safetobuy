@@ -10,13 +10,14 @@ ARGS = --config $(CONFIG) --experiments $(EXPERIMENTS)
 OMP_DIR := $(shell $(PY) -c "import importlib.util as u, pathlib as p; s = u.find_spec('sklearn'); print(p.Path(s.origin).parent / '.dylibs' if s else '')" 2>/dev/null)
 RUN = DYLD_FALLBACK_LIBRARY_PATH="$(OMP_DIR):/usr/local/lib:/usr/lib" PYTHONPATH=src $(PY)
 
-.PHONY: help setup data forecast quick tune sweep backtest figures render placeholder screenshots architecture app test all clean
+.PHONY: help setup data forecast quick calibrate tune sweep backtest figures render placeholder screenshots architecture app test all clean
 
 help:
 	@echo "make setup      create .venv and install pinned requirements (Python 3.11)"
 	@echo "make data       Phase 0: slice M5, weekly aggregation, synthetic SKU parameters"
 	@echo "make forecast   Phase 2: rolling-origin quantile forecasts + evaluation (cached)"
 	@echo "make quick      Phase 1: one window, policies A and B only"
+	@echo "make calibrate  tuning windows only: how often policy A runs short, by stress and cash cushion"
 	@echo "make tune       backtest on tuning windows only (never touches holdout)"
 	@echo "make sweep      sensitivity sweep on tuning windows, e.g. make sweep SET='--set risk.alpha=0.05,0.10'"
 	@echo "make backtest   full backtest grid -> results/<run_id>/"
@@ -42,6 +43,9 @@ forecast:
 quick:
 	$(RUN) scripts/run_backtest.py $(ARGS) --quick
 
+calibrate:
+	$(RUN) scripts/calibrate_scenarios.py $(ARGS)
+
 tune:
 	$(RUN) scripts/run_backtest.py $(ARGS) --tune-only
 
@@ -49,7 +53,7 @@ sweep:
 	$(RUN) scripts/tune_sweep.py $(ARGS) $(SET)
 
 backtest:
-	$(RUN) scripts/run_backtest.py $(ARGS)
+	$(RUN) scripts/run_backtest.py $(ARGS) $(BT)
 
 figures:
 	$(RUN) scripts/make_figures.py

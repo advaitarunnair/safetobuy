@@ -1,0 +1,39 @@
+72 runs on tuning windows ['W1', 'W2'], rule overdraft, stress sweep at default opening cash; 6 worker(s)
+TUNING WINDOWS ONLY
+                                                                 setting policy  weeks  shortfall  insolvent  fill  days_inv  gate_binding  gate_at_risk  margin_vs_A_%  margin_vs_B_%
+        continuation=replace_sales, tie_break=min_tail, max_prob_tol=0.0      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+        continuation=replace_sales, tie_break=min_tail, max_prob_tol=0.0      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+        continuation=replace_sales, tie_break=min_tail, max_prob_tol=0.0      C    156         35          2  0.86      6.95            61            95          -9.63          -6.68
+       continuation=replace_sales, tie_break=min_tail, max_prob_tol=0.05      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+       continuation=replace_sales, tie_break=min_tail, max_prob_tol=0.05      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+       continuation=replace_sales, tie_break=min_tail, max_prob_tol=0.05      C    156         39          2  0.85      6.73            52           104         -11.14          -8.24
+        continuation=replace_sales, tie_break=end_tail, max_prob_tol=0.0      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+        continuation=replace_sales, tie_break=end_tail, max_prob_tol=0.0      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+        continuation=replace_sales, tie_break=end_tail, max_prob_tol=0.0      C    156         37          3  0.86      6.84            59            97          -9.94          -7.00
+       continuation=replace_sales, tie_break=end_tail, max_prob_tol=0.05      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+       continuation=replace_sales, tie_break=end_tail, max_prob_tol=0.05      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+       continuation=replace_sales, tie_break=end_tail, max_prob_tol=0.05      C    156         39          3  0.85      6.72            51           105         -11.16          -8.26
+        continuation=replace_sales, tie_break=end_mean, max_prob_tol=0.0      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+        continuation=replace_sales, tie_break=end_mean, max_prob_tol=0.0      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+        continuation=replace_sales, tie_break=end_mean, max_prob_tol=0.0      C    156         35          1  0.87      7.03            64            92          -8.51          -5.53
+       continuation=replace_sales, tie_break=end_mean, max_prob_tol=0.05      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+       continuation=replace_sales, tie_break=end_mean, max_prob_tol=0.05      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+       continuation=replace_sales, tie_break=end_mean, max_prob_tol=0.05      C    156         35          1  0.87      6.93            61            95          -9.00          -6.03
+ continuation=replace_sales_capped, tie_break=min_tail, max_prob_tol=0.0      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+ continuation=replace_sales_capped, tie_break=min_tail, max_prob_tol=0.0      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+ continuation=replace_sales_capped, tie_break=min_tail, max_prob_tol=0.0      C    156         40          0  0.91      8.02            45           111          -4.26          -1.14
+continuation=replace_sales_capped, tie_break=min_tail, max_prob_tol=0.05      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+continuation=replace_sales_capped, tie_break=min_tail, max_prob_tol=0.05      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+continuation=replace_sales_capped, tie_break=min_tail, max_prob_tol=0.05      C    156         44          0  0.91      7.91            43           113          -4.99          -1.89
+ continuation=replace_sales_capped, tie_break=end_tail, max_prob_tol=0.0      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+ continuation=replace_sales_capped, tie_break=end_tail, max_prob_tol=0.0      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+ continuation=replace_sales_capped, tie_break=end_tail, max_prob_tol=0.0      C    156         40          0  0.92      8.17            50           106          -3.88          -0.75
+continuation=replace_sales_capped, tie_break=end_tail, max_prob_tol=0.05      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+continuation=replace_sales_capped, tie_break=end_tail, max_prob_tol=0.05      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+continuation=replace_sales_capped, tie_break=end_tail, max_prob_tol=0.05      C    156         34          0  0.92      8.26            55           101          -3.53          -0.39
+ continuation=replace_sales_capped, tie_break=end_mean, max_prob_tol=0.0      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+ continuation=replace_sales_capped, tie_break=end_mean, max_prob_tol=0.0      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+ continuation=replace_sales_capped, tie_break=end_mean, max_prob_tol=0.0      C    156         38          0  0.92      8.23            46           110          -3.73          -0.59
+continuation=replace_sales_capped, tie_break=end_mean, max_prob_tol=0.05      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+continuation=replace_sales_capped, tie_break=end_mean, max_prob_tol=0.05      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+continuation=replace_sales_capped, tie_break=end_mean, max_prob_tol=0.05      C    156         34          0  0.93      8.51            55           101          -2.71           0.46

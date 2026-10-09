@@ -1,61 +1,63 @@
-# Demo script (2 to 4 minutes)
+# Demo script (about 3 minutes 30 seconds)
 
-> Blocks between `BEGIN` and `END` markers are written by `scripts/render_results.py`.
-> Record after `make render`, so the numbers you say are the numbers on screen.
-> If the run does not support the planned headline, say what the generated sentence says.
+> Blocks between `BEGIN` and `END` markers are written by `scripts/render_results.py`, so the
+> numbers you say are the numbers on screen. Lines in quotation marks are spoken; everything else
+> is stage direction. Spoken text is about 470 words: at a normal pace that is under four minutes.
 
-**Setup before recording:** `make app`. Open the plan page with the scenario and week named in
-beat 1. Have the "Backtest results" page ready in the sidebar.
+**Before recording:** `make app`. Open the plan page at the scenario and week named in beat 3.
+Keep the "Backtest results" page one click away in the sidebar.
 
 ---
 
-## Beat 1. The problem and the person (about 20 seconds)
+## Beat 1. The problem and the person (20 seconds)
 
-*On screen: the plan page, top of page.*
+*On screen: the plan page, top.*
 
-> "Meet the owner of a small minimart. Every week she reorders a few hundred products. Her
-> inventory app tells her how much of each one to buy. It does not tell her whether she can
-> afford the total. This week:"
+> "This is the owner of a small minimart. Every week she reorders a few hundred products. Her
+> inventory app says how much of each to buy. It doesn't say whether she can afford the total."
+
+*Read the figure below from the screen:*
 
 <!-- BEGIN:demo_figure -->
 _No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._
 <!-- END:demo_figure -->
 
-> "Small shops do not usually fail because nothing sells. They fail because the rent is due the
-> same week as the supplier."
+> "Small shops rarely fail because nothing sells. They fail because the rent is due the same
+> week as the supplier."
 
-*Point at the blue note:* "One thing up front. The sales data is real, from Walmart. The costs
-and the bank balance are synthetic, and the minimart is our framing."
+## Beat 2. Data in, forecast with uncertainty, cash runway (75 seconds)
 
-## Beat 2. Data in, forecast with uncertainty, cash runway (about 60 to 75 seconds)
+*Point at the blue note.*
 
-*On screen: scroll to the cash runway chart.*
+> "One thing up front. The sales data is real, from Walmart. The costs and the bank balance are
+> synthetic, and the minimart is our framing."
+
+*Scroll to the cash runway chart.*
 
 > "We start from sales history. A machine-learning model, LightGBM with conformal calibration,
-> forecasts each product as a range rather than a single number, and we check that the ranges are
-> honest: a 90% range should contain the truth 90% of the time."
+> forecasts each product as a range, not a single number. We check those ranges are honest: a
+> ninety percent range should hold the truth ninety percent of the time, and ours does."
 
-*Optional cut to the forecast coverage figure on the Backtest page.*
+> "The next part is not machine learning. We simulate the next four weeks two thousand times:
+> sales, deliveries, supplier bills, rent. Products are simulated together, because a slow week
+> is slow across the whole shelf."
 
-> "Then comes the part that is not machine learning. We simulate the next four weeks two thousand
-> times: sales, deliveries, supplier bills, rent. Products are simulated together, because a slow
-> week is slow across the whole shelf."
+*Point at the median line, the bands, the dashed buffer line, the dip in the rent week.*
 
-*Point at the fan chart: median line, bands, dashed buffer line, the dip at the rent week.*
+> "The band is the likely range of her bank balance. The dashed line is the safety buffer she
+> chose. You can see the week the rent lands."
 
-> "The dark band is the likely range of her bank balance. The dashed line is the safety buffer
-> she chose. You can see the week the rent lands."
+*Read the last sentence of the caption under the chart.*
 
-*Read the caption under the chart:* "If we pretended products were independent, the same plan
-would look safer than it is. That is exactly the mistake that hurts in a bad week."
+> "Pretend products are independent and the same plan looks safer than it is."
 
-*Drag the risk-tolerance slider down, then back.*
+*Drag the risk-tolerance slider down and back.*
 
 > "She sets how much risk she accepts. The safe budget moves with it."
 
-## Beat 3. What to buy, with the value quantified (about 60 to 75 seconds)
+## Beat 3. What to buy, with the value quantified (95 seconds)
 
-*On screen: the "Safe budget this week" line, then the table.*
+*On screen: the "Safe budget this week" line, then the table. The scenario, week and numbers:*
 
 <!-- BEGIN:demo_week -->
 _No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._
@@ -65,25 +67,26 @@ _No results yet. Place the M5 files in `data/raw/`, run `make all`, and this blo
 > that earn the most per dollar. And for everything it trims or defers, it shows the price of
 > waiting."
 
-*Click a deferred row and read its "Why" line. Then a fully funded row.*
+*Point at one deferred row and read its "Why" line. Then one fully funded row.*
 
 *Turn on "Compare this week under policies A, B and D".*
 
-> "Here is the same week, same cash, under the standard reorder-point rule and under open-to-buy.
-> They do not look at the bank balance."
+> "Same week, same cash, under the standard reorder-point rule and under open-to-buy. Neither
+> looks at the bank balance."
 
 *Switch to "Backtest results".*
 
-> "Does it hold up over time? We ran every policy through the same simulated shop on real weekly
-> demand, and scored them on periods we never tuned on."
+> "Does it hold up? We ran every policy through the same simulated shop on real weekly demand,
+> chose our settings on one year, and scored once on the next."
 
-*Read the headline exactly as generated:*
+*Read the result exactly as generated:*
 
-<!-- BEGIN:headline_plain -->
+<!-- BEGIN:headline_spoken -->
 _No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._
-<!-- END:headline_plain -->
+<!-- END:headline_spoken -->
 
-> "Open-to-buy gives you a budget. We tell you whether you can afford it, and how to spend it best."
+> "Open-to-buy gives you a budget. We tell you whether you can afford it, and how to spend it
+> best."
 
 ---
 
@@ -92,4 +95,5 @@ _No results yet. Place the M5 files in `data/raw/`, run `make all`, and this blo
 - **"Is this just a wrapper around an LLM?"** No. The LLM only rewords numbers. Forecasting is LightGBM; the decision is a Monte Carlo cash model, a constrained budget search and an allocator. Every number in LLM text is verified in code. The app runs with no API key.
 - **"Is the whole thing ML?"** No. ML for prediction, simulation and optimization for the decision.
 - **"Are the dollar figures real?"** Demand and shelf prices are real. Costs, terms and cash are synthetic and disclosed in the README. Read the comparison between policies, not the dollars.
-- **"What about when cash is already too low?"** The tool flags "cash at risk regardless of purchasing". See the README limitations and the C+ variant.
+- **"Did you beat open-to-buy?"** On margin, yes, by a small amount with an interval clear of zero. On shortfall weeks, no. The README says exactly where it won and where it did not.
+- **"What about when no budget is safe?"** The tool says so, and recommends the plan with the best chance rather than buying nothing, because a shop that stops buying stops selling.

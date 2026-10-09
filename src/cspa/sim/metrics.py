@@ -37,7 +37,7 @@ def summarise(weekly: pd.DataFrame) -> pd.DataFrame:
             order_cut_weeks=int(g["order_cut"].sum()),
             gate_binding_weeks=int((g["gate_status"] == "constrained").sum()),
             gate_at_risk_weeks=int((g["gate_status"] == "cash_at_risk").sum()),
-            gate_violations=int(g["gate_violations"].fillna(0).sum()),
+            gate_violations=int(pd.to_numeric(g["gate_violations"], errors="coerce").fillna(0).sum()),
             gate_evals_mean=float(g["gate_evals"].mean()) if g["gate_evals"].notna().any() else np.nan,
         )
         rows.append(row)
@@ -134,31 +134,43 @@ def headline(weekly: pd.DataFrame, n_boot: int, block_weeks: int, ci: float, see
         "risk_equal_or_lower_than_B": bool(sf[2] <= sf[1]),
         "prob_risk_equal_or_lower_than_B": float(np.mean(risk <= 0)),
     }
-    out["supports_decided_form"] = bool(sf[0] > 0 and point["x"] > 0 and point["y"] > 0 and out["risk_equal_or_lower_than_B"])
+    xi, yi = out["x_ci"], out["y_ci"]
+    out["x_interval_excludes_zero"] = bool(xi and (xi[0] > 0 or xi[1] < 0))
+    out["y_interval_excludes_zero"] = bool(yi and (yi[0] > 0 or yi[1] < 0))
+    # The planned form needs all three parts, and the two differences must be clear of zero.
+    out["supports_decided_form"] = bool(
+        sf[0] > 0 and point["x"] > 0 and point["y"] > 0 and out["risk_equal_or_lower_than_B"] and out["x_interval_excludes_zero"] and out["y_interval_excludes_zero"]
+    )
     out["sentence"] = headline_sentence(out)
     return out
 
 
 def _ci_txt(ci_pair: list[float] | None, level: float, what: str) -> str:
-    return f" ({level:.0%} bootstrap interval for the {what}: {ci_pair[0]:+.0f}% to {ci_pair[1]:+.0f}%)" if ci_pair else ""
+    """Intervals are printed to one decimal, never rounded to a friendlier whole number."""
+    return f" ({level:.0%} bootstrap interval for the {what}: {ci_pair[0]:+.1f}% to {ci_pair[1]:+.1f}%)" if ci_pair else ""
 
 
 def headline_sentence(h: dict) -> str:
-    """The DECIDED headline form if the run supports it; otherwise a plain statement of what happened."""
+    """The planned headline form if the run supports it; otherwise a plain statement of what happened."""
     sf, x, y = h["shortfall_weeks"], h["x_pct_fewer_shortfalls_vs_A"], h["y_pct_margin_vs_B"]
     lvl = h["ci_level"]
     if h["supports_decided_form"]:
         return (
-            f"{x:.0f}% fewer cash shortfalls than policy A{_ci_txt(h['x_ci'], lvl, 'reduction')}, "
+            f"{x:.1f}% fewer cash shortfalls than policy A{_ci_txt(h['x_ci'], lvl, 'reduction')}, "
             f"and {y:.1f}% higher margin than policy B{_ci_txt(h['y_ci'], lvl, 'difference')} at equal or lower risk."
         )
     if sf["A"] == 0:
         part_a = f"Policy A had no cash-shortfall weeks in this setting and policy C had {sf['C']}"
     else:
-        part_a = f"Policy C had {abs(x):.0f}% {'fewer' if x >= 0 else 'more'} cash-shortfall weeks than policy A ({sf['C']} vs {sf['A']}){_ci_txt(h['x_ci'], lvl, 'reduction')}"
+        part_a = f"Policy C had {abs(x):.1f}% {'fewer' if x >= 0 else 'more'} cash-shortfall weeks than policy A ({sf['C']} vs {sf['A']}){_ci_txt(h['x_ci'], lvl, 'reduction')}"
     part_b = f"{abs(y):.1f}% {'higher' if y >= 0 else 'lower'} margin than policy B{_ci_txt(h['y_ci'], lvl, 'difference')}"
-    risk = "equal or lower" if h["risk_equal_or_lower_than_B"] else "higher"
-    return f"{part_a}, and {part_b}, at {risk} shortfall risk than B ({sf['C']} vs {sf['B']} weeks). This run does not support the planned headline form, so it is reported as it happened."
+    if h["risk_equal_or_lower_than_B"]:
+        risk = f"with no more shortfall weeks than B ({sf['C']} vs {sf['B']})"
+    else:
+        risk = f"but more shortfall weeks than B ({sf['C']} vs {sf['B']})"
+    va = h["margin_vs_A_pct"]
+    cost = f" Against policy A, C's margin was {abs(va):.1f}% {'lower' if va < 0 else 'higher'}."
+    return f"{part_a}, and {part_b}, {risk}.{cost} The planned headline form is not supported by this run, so the result is stated as it happened."
 
 
 def headline_scope(df: pd.DataFrame, exp) -> pd.DataFrame:

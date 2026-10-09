@@ -23,7 +23,7 @@ from _common import ROOT, base_parser, load_all, resolve_run
 from cspa.config import as_config
 from cspa.sim.metrics import aggregate, headline_scope
 
-TARGETS = ["README.md", "docs/project_description.md", "docs/demo_script.md"]
+TARGETS = ["README.md", "docs/project_description.md", "docs/demo_script.md", "docs/devpost_submission.md"]
 POLICY_ORDER = ["A", "B", "D", "C", "C_gate_prop", "OTB_marginal"]
 POLICY_NAME = {
     "A": "A: reorder point",
@@ -114,6 +114,117 @@ def synthetic_block(cfg) -> str:
     return md_table(pd.DataFrame(rows, columns=["Parameter", "Value", "Config key"]), numeric=False)
 
 
+def _iv(h: dict, key: str) -> str:
+    ci = h.get(key)
+    return f"{h['ci_level']:.0%} interval {ci[0]:+.1f}% to {ci[1]:+.1f}%" if ci else "no interval"
+
+
+def verdict_lines(h: dict) -> list[str]:
+    """What one headline comparison does and does not support, as plain statements."""
+    sf, ins, n = h["shortfall_weeks"], h["insolvency_weeks"], h["n_weeks"]
+    x, y, va = h["x_pct_fewer_shortfalls_vs_A"], h["y_pct_margin_vs_B"], h["margin_vs_A_pct"]
+    out = []
+    if sf["A"] == 0:
+        out.append(f"- **Fewer cash-shortfall weeks than A: nothing to measure.** A had no shortfall weeks in {n} weeks (C had {sf['C']}).")
+    elif sf["A"] < 0.05 * n:
+        out.append(f"- **Fewer cash-shortfall weeks than A: not informative.** A ran short in only {sf['A']} of {n} weeks (C: {sf['C']}), too few to support a claim.")
+    elif x > 0 and h["x_interval_excludes_zero"]:
+        out.append(f"- **Fewer cash-shortfall weeks than A: supported.** C {sf['C']} vs A {sf['A']} of {n} weeks, {x:.1f}% fewer ({_iv(h, 'x_ci')}).")
+    else:
+        word = "fewer" if x >= 0 else "more"
+        out.append(f"- **Fewer cash-shortfall weeks than A: not supported.** C {sf['C']} vs A {sf['A']} of {n} weeks, {abs(x):.1f}% {word} ({_iv(h, 'x_ci')}; the interval includes zero)." if not h["x_interval_excludes_zero"] else f"- **Fewer cash-shortfall weeks than A: not supported.** C had {abs(x):.1f}% more ({sf['C']} vs {sf['A']}; {_iv(h, 'x_ci')}).")
+    if y > 0 and h["y_interval_excludes_zero"]:
+        out.append(f"- **Higher margin than B: supported.** {y:.1f}% higher ({_iv(h, 'y_ci')}).")
+    elif h["y_interval_excludes_zero"]:
+        out.append(f"- **Higher margin than B: not supported.** C's margin was {abs(y):.1f}% lower ({_iv(h, 'y_ci')}).")
+    else:
+        out.append(f"- **Higher margin than B: not supported.** The difference was {y:+.1f}% ({_iv(h, 'y_ci')}; the interval includes zero).")
+    p = h["prob_risk_equal_or_lower_than_B"]
+    if h["risk_equal_or_lower_than_B"]:
+        out.append(f"- **No more shortfall weeks than B: holds.** C {sf['C']} vs B {sf['B']} (C had no more than B in {p:.0%} of bootstrap resamples).")
+    else:
+        out.append(f"- **No more shortfall weeks than B: does not hold.** C {sf['C']} vs B {sf['B']} (C had no more than B in only {p:.0%} of bootstrap resamples).")
+    out.append(f"- **Cost against A:** C's gross margin was {abs(va):.1f}% {'lower' if va < 0 else 'higher'} than A's.")
+    out.append(f"- **Weeks with cash below zero:** A {ins['A']}, B {ins['B']}, C {ins['C']}.")
+    return out
+
+
+def verdict_block(hl: dict, exp) -> str:
+    main = hl.get("main")
+    if not main:
+        return PENDING
+    roles = "+".join(exp.headline.roles)
+    out = [f"**Headline scope** ({roles} windows, the three stress levels, rule `{exp.headline.shortfall_rule}`, {main['n_weeks']} simulated weeks per policy):", ""]
+    out += verdict_lines(main)
+    out.append(f"- **Planned headline form:** {'supported' if main['supports_decided_form'] else 'not supported'}. It needs fewer shortfall weeks than A, higher margin than B, both with intervals clear of zero, and no more shortfall weeks than B.")
+    for rule, h in (hl.get("by_rule") or {}).items():
+        if h and rule != str(exp.headline.shortfall_rule):
+            out += ["", f"**Same windows under the alternative cash rule `{rule}`:**", ""] + verdict_lines(h)
+    parts = []
+    for label, group in (("window", hl.get("by_window") or {}), ("stress", hl.get("by_stress") or {})):
+        for k, h in group.items():
+            if not h:
+                continue
+            name = f"window {k}" if label == "window" else f"stress {int(round(float(k) * 100))}%"
+            sf = h["shortfall_weeks"]
+            parts.append(f"{name}: shortfall weeks A {sf['A']} / B {sf['B']} / C {sf['C']}, margin vs B {h['y_pct_margin_vs_B']:+.1f}% ({_iv(h, 'y_ci')}), planned form {'holds' if h['supports_decided_form'] else 'does not hold'}")
+    if parts:
+        out += ["", "**It is not uniform across the held-out data.** " + "; ".join(parts) + ". These cuts were not chosen in advance and none of them is the headline."]
+    for role, h in (hl.get("other_roles") or {}).items():
+        if h:
+            sf = h["shortfall_weeks"]
+            out += ["", f"**{role.capitalize()} windows (used to choose settings, so optimistic by construction):** shortfall weeks A {sf['A']} / B {sf['B']} / C {sf['C']}, margin vs B {h['y_pct_margin_vs_B']:+.1f}% ({_iv(h, 'y_ci')}), vs A {h['margin_vs_A_pct']:+.1f}%."]
+    return "\n".join(out)
+
+
+def secondary_block(exp) -> str:
+    """The comparison slice named in results/SECONDARY, summarised from its own run."""
+    from _common import results_root
+
+    ptr = results_root() / "SECONDARY"
+    if not ptr.exists():
+        return "_No comparison slice has been run._"
+    run = results_root() / ptr.read_text().strip()
+    man = json.loads((run / "manifest.json").read_text())
+    hl = json.loads((run / "headline.json").read_text())
+    sexp = as_config(man["experiments"])
+    sl, h = man["data_slice"], hl.get("main")
+    if not h:
+        return "_The comparison run has no headline._"
+    scope = headline_scope(pd.read_csv(run / "metrics.csv"), sexp)
+    sf, n = h["shortfall_weeks"], h["n_weeks"]
+    out = [
+        f"**Store {sl['store_id']}, department {sl['dept_id']}** ({sl['n_skus']} of {sl['n_skus_in_dept']} SKUs), same settings as the primary slice with nothing retuned. Run `{man['run_id']}`, config hash `{man['config_hash']}`.",
+        "",
+    ]
+    out += verdict_lines(h)
+    if sf["A"] < 0.05 * n:
+        formal = " The planned headline form holds formally here, but only on that handful of weeks, so we do not lead with it." if h["supports_decided_form"] else ""
+        out += ["", f"On this slice the held-out windows were comfortable: policy A ran short in only {sf['A']} of {n} weeks, so it says little about cash shortfalls. What it does show is the margin comparison.{formal}"]
+    else:
+        out += ["", f"Planned headline form on this slice: {'supported' if h['supports_decided_form'] else 'not supported'}."]
+    out += ["", policy_table(aggregate(scope, ["shortfall_rule"]))]
+    return "\n".join(out)
+
+
+def ablation_block(pooled: pd.DataFrame) -> str:
+    """What the gate and the allocator each changed, from the headline-scope ablation rows."""
+    p = pooled.set_index("policy")
+    if not {"B", "C", "C_gate_prop", "OTB_marginal"} <= set(p.index):
+        return PENDING
+
+    def step(a: str, b: str) -> str:
+        dm = 100.0 * (p.loc[b, "gross_margin"] / p.loc[a, "gross_margin"] - 1.0)
+        return f"gross margin {dm:+.1f}%, shortfall weeks {int(p.loc[a, 'shortfall_weeks'])} to {int(p.loc[b, 'shortfall_weeks'])}"
+
+    return (
+        f"Swapping the proportional split for the marginal allocator: with an open-to-buy budget, {step('B', 'OTB_marginal')}; "
+        f"with the cash gate, {step('C_gate_prop', 'C')}. "
+        f"Swapping the open-to-buy budget for the cash gate: with a proportional split, {step('B', 'C_gate_prop')}; "
+        f"with the marginal allocator, {step('OTB_marginal', 'C')}."
+    )
+
+
 def c_vs_b_block(hl: dict, exp) -> str:
     """Plain statement of how C compared with B, generated from the run."""
     lines = []
@@ -187,6 +298,7 @@ def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
 
     scope = headline_scope(metrics, exp)
     blocks["results_table"] = policy_table(aggregate(scope, ["shortfall_rule"])) if not scope.empty else PENDING
+    blocks["ablation_note"] = ablation_block(aggregate(scope, ["shortfall_rule"])) if not scope.empty else PENDING
 
     parts = []
     for s, g in aggregate(scope, ["stress"]).groupby("stress"):
@@ -233,8 +345,9 @@ def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
 
     gd = manifest["gate_diagnostics_policy_C"]
     blocks["gate_diagnostics"] = (
-        f"Across all {gd['decisions']} policy-C decisions in this run the gate was binding in {gd['binding_weeks']}, flagged "
-        f"\"cash at risk regardless of purchasing\" in {gd['cash_at_risk_weeks']}, and the coarse-grid check found "
+        f"Across all {gd['decisions']} policy-C decisions in this run, some budget met the target in {gd['decisions'] - gd['cash_at_risk_weeks']} "
+        f"(the gate was binding in {gd['binding_weeks']} of them). In the other {gd['cash_at_risk_weeks']} no budget did, not even zero: the result was flagged "
+        f"\"cash at risk regardless of purchasing\" and the best-chance budget was used. The coarse-grid check found "
         f"{gd['monotonicity_violations']} monotonicity violation(s) (grid points whose feasibility disagreed with the bisection)."
     )
     blocks["run_info"] = md_table(
@@ -260,6 +373,30 @@ def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
     )
     blocks["synthetic_params"] = synthetic_block(cfg)
     blocks["c_vs_b"] = c_vs_b_block(hl, exp)
+    blocks["verdict"] = verdict_block(hl, exp)
+    blocks["secondary_slice"] = secondary_block(exp)
+    if main:
+        sfm, insm = main["shortfall_weeks"], main["insolvency_weeks"]
+        blocks["headline_numbers"] = (
+            f"C had {sfm['C']} cash-shortfall weeks against {sfm['A']} for A and {sfm['B']} for B, out of {main['n_weeks']} held-out weeks each: "
+            f"{main['x_pct_fewer_shortfalls_vs_A']:.1f}% fewer than A ({_iv(main, 'x_ci')}). C's gross margin was {main['y_pct_margin_vs_B']:+.1f}% against B ({_iv(main, 'y_ci')}) "
+            f"and {main['margin_vs_A_pct']:+.1f}% against A. Weeks with cash below zero: A {insm['A']}, B {insm['B']}, C {insm['C']}."
+        )
+        x, y, va = main["x_pct_fewer_shortfalls_vs_A"], main["y_pct_margin_vs_B"], main["margin_vs_A_pct"]
+        if main["supports_decided_form"]:
+            spoken = (
+                f"On data we never tuned on, our policy had {x:.1f} percent fewer cash-shortfall weeks than the standard reorder-point rule, "
+                f"and {y:.1f} percent more margin than open-to-buy, with no more shortfall weeks than open-to-buy."
+            )
+        else:
+            a = f"{abs(x):.1f} percent {'fewer' if x >= 0 else 'more'} cash-shortfall weeks than the standard reorder-point rule" if sfm["A"] else "no difference in shortfall weeks worth reporting against the reorder-point rule"
+            b = f"{abs(y):.1f} percent {'more' if y >= 0 else 'less'} margin than open-to-buy"
+            r = f"It was not a clean sweep: it had {sfm['C']} shortfall weeks to open-to-buy's {sfm['B']}" if not main["risk_equal_or_lower_than_B"] else f"It had no more shortfall weeks than open-to-buy, {sfm['C']} against {sfm['B']}"
+            spoken = f"On data we never tuned on, our policy had {a}, and {b}. {r}, and it gave up {abs(va):.1f} percent of margin against buying regardless of cash."
+        blocks["headline_spoken"] = spoken
+    else:
+        blocks["headline_numbers"] = PENDING
+        blocks["headline_spoken"] = PENDING
     if include_demo:  # recomputes every bundled week, so the app skips it
         blocks.update(demo_block(run, cfg, exp))
     blocks["figures"] = "\n".join(f"![{f.stem}](results/{run.name}/figures/{f.name})" for f in sorted((run / "figures").glob("*.png"))) if (run / "figures").exists() else PENDING
@@ -267,7 +404,7 @@ def build_blocks(run: Path, include_demo: bool = True) -> dict[str, str]:
 
 
 def placeholder_blocks(cfg) -> dict[str, str]:
-    keys = ["headline", "headline_plain", "results_table", "stress_table", "start_cash_table", "robustness_table", "forecast_table", "gate_diagnostics", "run_info", "figures", "c_vs_b", "demo_week", "demo_figure"]
+    keys = ["headline", "headline_plain", "headline_numbers", "headline_spoken", "verdict", "secondary_slice", "ablation_note", "results_table", "stress_table", "start_cash_table", "robustness_table", "forecast_table", "gate_diagnostics", "run_info", "figures", "c_vs_b", "demo_week", "demo_figure"]
     out = {k: PENDING for k in keys}
     out["project_name"] = cfg.project.name
     out["synthetic_params"] = synthetic_block(cfg)

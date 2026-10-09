@@ -139,23 +139,30 @@ def test_headline_uses_the_planned_form_only_when_the_run_supports_it():
     good = headline(fake_weekly({"A": 6, "B": 5, "C": 2}, {"A": 100.0, "B": 100.0, "C": 104.0}), 200, 2, 0.9, 1, "t")
     assert good["supports_decided_form"]
     assert good["x_pct_fewer_shortfalls_vs_A"] == pytest.approx(100 * 4 / 6) and good["y_pct_margin_vs_B"] == pytest.approx(4.0)
-    assert good["sentence"].startswith("67% fewer cash shortfalls than policy A") and "4.0% higher margin than policy B" in good["sentence"]
+    assert good["sentence"].startswith("66.7% fewer cash shortfalls than policy A") and "4.0% higher margin than policy B" in good["sentence"]
     assert good["sentence"].endswith("at equal or lower risk.")
     assert good["x_ci"][0] <= good["x_pct_fewer_shortfalls_vs_A"] <= good["x_ci"][1]
 
     lower_margin = headline(fake_weekly({"A": 6, "B": 5, "C": 2}, {"A": 100.0, "B": 100.0, "C": 97.0}), 200, 2, 0.9, 1, "t")
     assert not lower_margin["supports_decided_form"]
-    assert "3.0% lower margin than policy B" in lower_margin["sentence"] and "does not support the planned headline form" in lower_margin["sentence"]
+    assert "3.0% lower margin than policy B" in lower_margin["sentence"] and "planned headline form is not supported" in lower_margin["sentence"]
 
     riskier = headline(fake_weekly({"A": 6, "B": 1, "C": 3}, {"A": 100.0, "B": 100.0, "C": 110.0}), 200, 2, 0.9, 1, "t")
-    assert not riskier["supports_decided_form"] and "higher shortfall risk than B" in riskier["sentence"]
+    assert not riskier["supports_decided_form"] and "but more shortfall weeks than B (3 vs 1)" in riskier["sentence"]
 
     no_risk = headline(fake_weekly({"A": 0, "B": 0, "C": 0}, {"A": 100.0, "B": 100.0, "C": 101.0}), 200, 2, 0.9, 1, "t")
     assert not no_risk["supports_decided_form"] and "Policy A had no cash-shortfall weeks" in no_risk["sentence"]
     assert np.isnan(no_risk["x_pct_fewer_shortfalls_vs_A"]) and no_risk["x_ci"] is None
 
     worse = headline(fake_weekly({"A": 2, "B": 2, "C": 5}, {"A": 100.0, "B": 100.0, "C": 90.0}), 200, 2, 0.9, 1, "t")
-    assert "150% more cash-shortfall weeks than policy A" in worse["sentence"]
+    assert "150.0% more cash-shortfall weeks than policy A" in worse["sentence"] and "C's margin was 10.0% lower" in worse["sentence"]
+
+    # a difference whose interval includes zero is never reported in the planned form
+    noisy = fake_weekly({"A": 6, "B": 5, "C": 2}, {"A": 100.0, "B": 100.0, "C": 100.0})
+    noisy.loc[(noisy["policy"] == "C") & (noisy["t"] % 2 == 0), "gross_margin"] = 130.0
+    noisy.loc[(noisy["policy"] == "C") & (noisy["t"] % 2 == 1), "gross_margin"] = 72.0
+    h = headline(noisy, 400, 1, 0.9, 1, "t")
+    assert h["y_pct_margin_vs_B"] > 0 and not h["y_interval_excludes_zero"] and not h["supports_decided_form"]
 
 
 def test_headline_set_scopes(result, exp):

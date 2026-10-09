@@ -65,6 +65,7 @@ def main() -> None:
     ap.add_argument("--jobs", type=int, default=None)
     ap.add_argument("--tag", default=None, help="suffix for the run id")
     ap.add_argument("--no-latest", action="store_true", help="do not point results/LATEST at this run (comparison slices)")
+    ap.add_argument("--secondary", action="store_true", help="comparison slice: no app bundle, results/SECONDARY points here, LATEST untouched")
     args = ap.parse_args()
     cfg, exp = load_all(args)
     panel, params = load_panel_and_params(cfg)
@@ -89,7 +90,9 @@ def main() -> None:
     run_id = dt.datetime.now().strftime("%Y%m%d-%H%M%S") + f"_{chash[:8]}" + (f"_{args.tag}" if args.tag else ("_tune" if args.tune_only else "_quick" if args.quick else ""))
     out = results_root() / run_id
     bundle_policy = "C"
-    jobs = [(s, policies, bundle_policy if (not partial) and bundle_policy in policies and _is_bundle(s, exp) else None) for s in grid]
+    if args.secondary:
+        args.no_latest = True
+    jobs = [(s, policies, bundle_policy if (not partial) and (not args.secondary) and bundle_policy in policies and _is_bundle(s, exp) else None) for s in grid]
     n_jobs = max(1, min(int(args.jobs or exp.n_jobs), len(jobs)))
     print(f"run {run_id}: {len(jobs)} scenarios x {len(policies)} policies, forecaster '{model}', {n_jobs} worker(s)")
 
@@ -162,6 +165,8 @@ def main() -> None:
     write_json(out / "manifest.json", manifest)
     if not partial and not args.no_latest:
         (results_root() / "LATEST").write_text(run_id + "\n")
+    if not partial and args.secondary:
+        (results_root() / "SECONDARY").write_text(run_id + "\n")
 
     print("=" * 78)
     print(f"BACKTEST CHECKPOINT  ({seconds}s)  ->  results/{run_id}/")

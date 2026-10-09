@@ -1,0 +1,9 @@
+6 runs on tuning windows ['W1', 'W2'], rule cut_proportional, stress sweep at default opening cash; 6 worker(s)
+TUNING WINDOWS ONLY
+setting       policy  weeks  shortfall  insolvent  fill  days_inv  gate_binding  gate_at_risk  margin_vs_A_%  margin_vs_B_%
+default            A    156         29          0  0.95      9.05             0             0           0.00           6.39
+default            B    156         30          4  0.89      7.43             0             0          -6.01           0.00
+default            D    156         66         18  0.69      8.61             0             0         -18.29         -13.06
+default            C    156         31          4  0.88      7.83            55           101          -6.49          -0.52
+default  C_gate_prop    156         29          3  0.91      8.07            28            88          -3.67           2.49
+default OTB_marginal    156         29          1  0.91      7.90             0             0          -3.48           2.69

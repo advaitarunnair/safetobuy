@@ -1,0 +1,9 @@
+12 runs on tuning windows ['W1', 'W2'], rule overdraft, stress sweep at default opening cash; 6 worker(s)
+TUNING WINDOWS ONLY
+               setting policy  weeks  shortfall  insolvent  fill  days_inv  gate_binding  gate_at_risk  margin_vs_A_%  margin_vs_B_%
+on_infeasible=max_prob      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+on_infeasible=max_prob      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+on_infeasible=max_prob      C    156         34          0  0.93      8.51            55           101          -2.71           0.46
+    on_infeasible=zero      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+    on_infeasible=zero      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+    on_infeasible=zero      C    156        138        113  0.18     15.70             9           147         -82.28         -81.70

@@ -1,0 +1,57 @@
+108 runs on tuning windows ['W1', 'W2'], rule overdraft, stress sweep at default opening cash; 6 worker(s)
+TUNING WINDOWS ONLY
+                                                setting policy  weeks  shortfall  insolvent  fill  days_inv  gate_binding  gate_at_risk  margin_vs_A_%  margin_vs_B_%
+     alpha=0.05, capital_rate_annual=0.15, rank_by=cost      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+     alpha=0.05, capital_rate_annual=0.15, rank_by=cost      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+     alpha=0.05, capital_rate_annual=0.15, rank_by=cost      C    156         33          0  0.93      8.20            53           103          -3.09           0.07
+alpha=0.05, capital_rate_annual=0.15, rank_by=committed      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+alpha=0.05, capital_rate_annual=0.15, rank_by=committed      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+alpha=0.05, capital_rate_annual=0.15, rank_by=committed      C    156         36          0  0.92      8.17            52           104          -3.28          -0.12
+     alpha=0.05, capital_rate_annual=0.15, rank_by=cash      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+     alpha=0.05, capital_rate_annual=0.15, rank_by=cash      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+     alpha=0.05, capital_rate_annual=0.15, rank_by=cash      C    156         35          0  0.93      8.17            48           108          -3.29          -0.14
+      alpha=0.05, capital_rate_annual=1.0, rank_by=cost      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+      alpha=0.05, capital_rate_annual=1.0, rank_by=cost      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+      alpha=0.05, capital_rate_annual=1.0, rank_by=cost      C    156         35          0  0.92      8.16            51           103          -3.21          -0.05
+ alpha=0.05, capital_rate_annual=1.0, rank_by=committed      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+ alpha=0.05, capital_rate_annual=1.0, rank_by=committed      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+ alpha=0.05, capital_rate_annual=1.0, rank_by=committed      C    156         35          0  0.93      8.20            50           104          -3.11           0.05
+      alpha=0.05, capital_rate_annual=1.0, rank_by=cash      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+      alpha=0.05, capital_rate_annual=1.0, rank_by=cash      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+      alpha=0.05, capital_rate_annual=1.0, rank_by=cash      C    156         36          0  0.93      8.14            47           108          -3.35          -0.20
+      alpha=0.1, capital_rate_annual=0.15, rank_by=cost      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+      alpha=0.1, capital_rate_annual=0.15, rank_by=cost      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+      alpha=0.1, capital_rate_annual=0.15, rank_by=cost      C    156         34          0  0.93      8.51            55           101          -2.71           0.46
+ alpha=0.1, capital_rate_annual=0.15, rank_by=committed      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+ alpha=0.1, capital_rate_annual=0.15, rank_by=committed      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+ alpha=0.1, capital_rate_annual=0.15, rank_by=committed      C    156         35          0  0.93      8.44            54           102          -2.85           0.32
+      alpha=0.1, capital_rate_annual=0.15, rank_by=cash      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+      alpha=0.1, capital_rate_annual=0.15, rank_by=cash      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+      alpha=0.1, capital_rate_annual=0.15, rank_by=cash      C    156         33          0  0.93      8.38            54           102          -2.95           0.22
+       alpha=0.1, capital_rate_annual=1.0, rank_by=cost      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+       alpha=0.1, capital_rate_annual=1.0, rank_by=cost      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+       alpha=0.1, capital_rate_annual=1.0, rank_by=cost      C    156         35          0  0.93      8.45            52           100          -2.83           0.34
+  alpha=0.1, capital_rate_annual=1.0, rank_by=committed      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+  alpha=0.1, capital_rate_annual=1.0, rank_by=committed      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+  alpha=0.1, capital_rate_annual=1.0, rank_by=committed      C    156         35          0  0.93      8.44            50           102          -2.87           0.30
+       alpha=0.1, capital_rate_annual=1.0, rank_by=cash      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+       alpha=0.1, capital_rate_annual=1.0, rank_by=cash      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+       alpha=0.1, capital_rate_annual=1.0, rank_by=cash      C    156         35          0  0.93      8.38            48           104          -2.98           0.18
+      alpha=0.2, capital_rate_annual=0.15, rank_by=cost      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+      alpha=0.2, capital_rate_annual=0.15, rank_by=cost      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+      alpha=0.2, capital_rate_annual=0.15, rank_by=cost      C    156         41          0  0.93      8.82            63            93          -2.36           0.82
+ alpha=0.2, capital_rate_annual=0.15, rank_by=committed      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+ alpha=0.2, capital_rate_annual=0.15, rank_by=committed      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+ alpha=0.2, capital_rate_annual=0.15, rank_by=committed      C    156         41          0  0.93      8.86            62            94          -2.22           0.97
+      alpha=0.2, capital_rate_annual=0.15, rank_by=cash      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+      alpha=0.2, capital_rate_annual=0.15, rank_by=cash      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+      alpha=0.2, capital_rate_annual=0.15, rank_by=cash      C    156         39          0  0.93      8.76            58            98          -2.57           0.60
+       alpha=0.2, capital_rate_annual=1.0, rank_by=cost      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+       alpha=0.2, capital_rate_annual=1.0, rank_by=cost      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+       alpha=0.2, capital_rate_annual=1.0, rank_by=cost      C    156         36          0  0.93      8.82            58            92          -2.29           0.89
+  alpha=0.2, capital_rate_annual=1.0, rank_by=committed      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+  alpha=0.2, capital_rate_annual=1.0, rank_by=committed      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+  alpha=0.2, capital_rate_annual=1.0, rank_by=committed      C    156         35          0  0.93      8.76            57            93          -2.41           0.77
+       alpha=0.2, capital_rate_annual=1.0, rank_by=cash      A    156         51          0  0.97      9.83             0             0           0.00           3.26
+       alpha=0.2, capital_rate_annual=1.0, rank_by=cash      B    156         30          0  0.93      7.53             0             0          -3.16           0.00
+       alpha=0.2, capital_rate_annual=1.0, rank_by=cash      C    156         35          0  0.94      8.73            54            95          -2.36           0.82

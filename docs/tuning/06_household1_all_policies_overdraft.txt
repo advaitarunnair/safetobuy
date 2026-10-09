@@ -1,0 +1,9 @@
+6 runs on tuning windows ['W1', 'W2'], rule overdraft, stress sweep at default opening cash; 6 worker(s)
+TUNING WINDOWS ONLY
+setting       policy  weeks  shortfall  insolvent  fill  days_inv  gate_binding  gate_at_risk  margin_vs_A_%  margin_vs_B_%
+default            A    156         54          0  0.97      9.41             0             0           0.00           1.93
+default            B    156         36          0  0.94      7.25             0             0          -1.89           0.00
+default            D    156        101         18  0.75      9.14             0             0          -6.87          -5.07
+default            C    156         38          0  0.94      8.44            72            84          -1.74           0.16
+default  C_gate_prop    156         40          0  0.95      8.57            32            79          -1.19           0.72
+default OTB_marginal    156         37          0  0.94      7.94             0             0          -1.17           0.73

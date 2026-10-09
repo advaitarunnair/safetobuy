@@ -2,8 +2,8 @@
 # docs/ASSUMPTIONS.md. Nothing in src/ hard-codes these values.
 
 project:
-  # PROJECT_NAME placeholder. The team picks the final name; change it here only.
-  name: "Cash-Safe Purchasing Assistant"
+  # Display name. Change it here only (README and docs are filled by `make render`).
+  name: "SafeToBuy"
   persona: "a small Singapore minimart"
 
 seed: 20261009
