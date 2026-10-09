@@ -51,11 +51,11 @@ Dollar figures are illustrative; the comparison between policies is the result.
 **Result on held-out data:**
 
 <!-- BEGIN:headline_plain -->
-_No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._
+Policy C had 27.9% fewer cash-shortfall weeks than policy A (62 vs 86) (90% bootstrap interval for the reduction: +18.4% to +42.4%), and 1.0% higher margin than policy B (90% bootstrap interval for the difference: +0.6% to +1.7%), but more shortfall weeks than B (62 vs 58). Against policy A, C's margin was 2.9% lower. The planned headline form is not supported by this run, so the result is stated as it happened.
 <!-- END:headline_plain -->
 
 <!-- BEGIN:headline_numbers -->
-_No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._
+C had 62 cash-shortfall weeks against 86 for A and 58 for B, out of 156 held-out weeks each: 27.9% fewer than A (90% interval +18.4% to +42.4%). C's gross margin was +1.0% against B (90% interval +0.6% to +1.7%) and -2.9% against A. Weeks with cash below zero: A 0, B 2, C 0.
 <!-- END:headline_numbers -->
 
 We report this as it happened. Where it did not win, and a second product slice, are in the README.

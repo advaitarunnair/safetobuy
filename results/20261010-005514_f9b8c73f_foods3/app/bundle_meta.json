@@ -1,0 +1,326 @@
+{
+  "run_id": "20261010-005514_f9b8c73f_foods3",
+  "policy": "C",
+  "data_source": "M5",
+  "first_history_week": 134,
+  "scenarios": [
+    {
+      "scenario": "W4_s50_c0.35_overdraft",
+      "window": "W4",
+      "role": "holdout",
+      "stress": 0.5,
+      "cash_cushion": 0.35,
+      "shortfall_rule": "overdraft",
+      "cal": {
+        "window_start": 251,
+        "rev_star": 25119.257500000003,
+        "repl_star": 16885.476346153846,
+        "gm_star": 8233.781153846157,
+        "fixed_avg": 7822.0920961538495,
+        "fixed_base": 4870.616352564106,
+        "lump": 11805.902974358976,
+        "lump_every": 4,
+        "lump_offset": 2,
+        "buffer": 15644.184192307699,
+        "start_cash": 18599.142552884623,
+        "stress": 0.5,
+        "stress_attainable": true
+      },
+      "weeks": [
+        251,
+        252,
+        253,
+        254,
+        255,
+        256,
+        257,
+        258,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266,
+        267,
+        268,
+        269,
+        270,
+        271,
+        272,
+        273,
+        274,
+        275,
+        276
+      ]
+    },
+    {
+      "scenario": "W4_s70_c0.35_overdraft",
+      "window": "W4",
+      "role": "holdout",
+      "stress": 0.7,
+      "cash_cushion": 0.35,
+      "shortfall_rule": "overdraft",
+      "cal": {
+        "window_start": 251,
+        "rev_star": 25119.257500000003,
+        "repl_star": 16885.476346153846,
+        "gm_star": 8233.781153846157,
+        "fixed_avg": 7822.0920961538495,
+        "fixed_base": 5996.314775641029,
+        "lump": 7303.109282051283,
+        "lump_every": 4,
+        "lump_offset": 2,
+        "buffer": 15644.184192307699,
+        "start_cash": 19781.12589711539,
+        "stress": 0.7,
+        "stress_attainable": true
+      },
+      "weeks": [
+        251,
+        252,
+        253,
+        254,
+        255,
+        256,
+        257,
+        258,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266,
+        267,
+        268,
+        269,
+        270,
+        271,
+        272,
+        273,
+        274,
+        275,
+        276
+      ]
+    },
+    {
+      "scenario": "W4_s90_c0.35_overdraft",
+      "window": "W4",
+      "role": "holdout",
+      "stress": 0.9,
+      "cash_cushion": 0.35,
+      "shortfall_rule": "overdraft",
+      "cal": {
+        "window_start": 251,
+        "rev_star": 25119.257500000003,
+        "repl_star": 16885.476346153846,
+        "gm_star": 8233.781153846157,
+        "fixed_avg": 7822.0920961538495,
+        "fixed_base": 7122.013198717952,
+        "lump": 2800.31558974359,
+        "lump_every": 4,
+        "lump_offset": 2,
+        "buffer": 15644.184192307699,
+        "start_cash": 20963.10924134616,
+        "stress": 0.9,
+        "stress_attainable": true
+      },
+      "weeks": [
+        251,
+        252,
+        253,
+        254,
+        255,
+        256,
+        257,
+        258,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266,
+        267,
+        268,
+        269,
+        270,
+        271,
+        272,
+        273,
+        274,
+        275,
+        276
+      ]
+    }
+  ],
+  "config": {
+    "project": {
+      "name": "SafeToBuy",
+      "persona": "a small Singapore minimart"
+    },
+    "seed": 20261009,
+    "data": {
+      "raw_dir": "data/raw",
+      "processed_dir": "data/processed",
+      "store_id": "CA_1",
+      "dept_id": "FOODS_3",
+      "n_skus": 300,
+      "selection": {
+        "mode": "pre_backtest",
+        "weeks": 52
+      }
+    },
+    "horizons": {
+      "review_period_weeks": 1,
+      "forecast_horizon_weeks": 4,
+      "cash_horizon_weeks": 4
+    },
+    "forecast": {
+      "model": "lgbm",
+      "quantiles": [
+        0.05,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9,
+        0.95
+      ],
+      "refit_every_weeks": 4,
+      "train_window_weeks": 156,
+      "min_train_weeks": 60,
+      "warmup_weeks": 30,
+      "baseline_residual_weeks": 52,
+      "lgbm": {
+        "n_estimators": 300,
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "min_data_in_leaf": 40,
+        "feature_fraction": 0.8,
+        "bagging_fraction": 0.8,
+        "bagging_freq": 1,
+        "lambda_l2": 1.0,
+        "num_threads": 4
+      },
+      "conformal": {
+        "enabled": true,
+        "calibration_weeks": 26,
+        "min_samples": 200,
+        "scale_floor": 1.0
+      }
+    },
+    "sampling": {
+      "method": "block",
+      "bank_weeks": 52,
+      "block_len": 2,
+      "n_paths_backtest": 500,
+      "n_paths_app": 2000,
+      "tail_cap": 0.999
+    },
+    "synthetic": {
+      "margin_range": [
+        0.22,
+        0.4
+      ],
+      "lead_time_weeks": {
+        "values": [
+          1,
+          2
+        ],
+        "probs": [
+          0.6,
+          0.4
+        ]
+      },
+      "pack_sizes": {
+        "values": [
+          1,
+          6,
+          12,
+          24
+        ],
+        "max_share_of_weekly_demand": 0.5
+      },
+      "moq_packs": {
+        "values": [
+          1,
+          2
+        ],
+        "probs": [
+          0.7,
+          0.3
+        ]
+      },
+      "suppliers": [
+        {
+          "name": "S1_pay_on_delivery",
+          "share": 0.6,
+          "pay_delay_weeks": 0
+        },
+        {
+          "name": "S2_net7",
+          "share": 0.4,
+          "pay_delay_weeks": 1
+        }
+      ],
+      "perishable_share": 0.2,
+      "spoilage_rate_per_week": 0.1,
+      "salvage_frac_of_cost": 0.2,
+      "holding_rate_annual": 0.2,
+      "capital_rate_annual": 0.15,
+      "fixed_cost_share_of_gross_margin": 0.95,
+      "fixed_cost_lump_every_weeks": 4,
+      "fixed_cost_lump_offset": 2,
+      "calibration_weeks": 52,
+      "burn_in_weeks": 8
+    },
+    "risk": {
+      "alpha": 0.1,
+      "buffer_weeks_of_fixed_costs": 2.0
+    },
+    "gate": {
+      "mode": "mc",
+      "deterministic_quantile": 0.1,
+      "continuation": "replace_sales_capped",
+      "charge_beyond_horizon": false,
+      "tol_frac": 0.005,
+      "tol_abs": 20.0,
+      "max_bisection_iter": 12,
+      "n_grid": 8,
+      "on_infeasible": "max_prob",
+      "n_refine": 6,
+      "max_prob_tol": 0.05,
+      "tie_break": "end_mean"
+    },
+    "allocator": {
+      "perishable_overage": "spoilage",
+      "rank_by": "cost"
+    },
+    "policies": {
+      "reorder_point": {
+        "z": 1.65
+      },
+      "otb": {
+        "target_weeks_cover": "auto",
+        "planned_markdowns": 0.0
+      }
+    },
+    "world": {
+      "shortfall_rule": "overdraft"
+    },
+    "llm": {
+      "enabled": true,
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "max_tokens": 16000,
+      "refusal_fallback": false,
+      "max_skus_per_call": 40,
+      "cache_dir": "data/processed/llm_cache"
+    }
+  }
+}

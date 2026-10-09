@@ -197,7 +197,7 @@ def page_plan(run: Path, manifest: dict) -> None:
     st.plotly_chart(fan_chart(res, buffer, overlay), width="stretch", config={"displayModeBar": False})
     lump = [f"week {j + 1} ({usd(v)})" for j, v in enumerate(res["fixed"]) if v > res["fixed"].min() + 1e-6]
     st.caption(md(
-        f"Bands show {n_paths:,} joint demand paths (SKUs move together as they did in past forecast errors). Later weeks assume routine one-for-one replenishment. "
+        f"Bands show {n_paths:,} joint demand paths (SKUs move together as they did in past forecast errors). Later weeks assume one-for-one replenishment that never spends below the buffer. "
         + (f"Heavier fixed-cost week: {', '.join(lump)}. " if lump else "")
         + f"If SKUs were sampled independently the same plan would look {res['p_safe_independent']:.0%} safe instead of {res['p_safe']:.0%}: independence understates risk."
     ))

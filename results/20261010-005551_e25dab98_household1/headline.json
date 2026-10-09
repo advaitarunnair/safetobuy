@@ -1,0 +1,361 @@
+{
+  "main": {
+    "scope": "holdout windows, stress sweep, overdraft",
+    "n_scenarios": 6,
+    "n_weeks": 156,
+    "ci_level": 0.9,
+    "n_boot": 2000,
+    "block_weeks": 4,
+    "shortfall_weeks": {
+      "A": 3,
+      "B": 0,
+      "C": 0
+    },
+    "insolvency_weeks": {
+      "A": 0,
+      "B": 0,
+      "C": 0
+    },
+    "gross_margin": {
+      "A": 684624.1620000001,
+      "B": 675452.4,
+      "C": 685213.02
+    },
+    "x_pct_fewer_shortfalls_vs_A": 100.0,
+    "x_ci": [
+      100.0,
+      100.0
+    ],
+    "y_pct_margin_vs_B": 1.445049273642376,
+    "y_ci": [
+      1.28969172465083,
+      1.6728402685622241
+    ],
+    "margin_vs_A_pct": 0.08601186354271424,
+    "risk_equal_or_lower_than_B": true,
+    "prob_risk_equal_or_lower_than_B": 1.0,
+    "x_interval_excludes_zero": true,
+    "y_interval_excludes_zero": true,
+    "supports_decided_form": true,
+    "sentence": "100.0% fewer cash shortfalls than policy A (90% bootstrap interval for the reduction: +100.0% to +100.0%), and 1.4% higher margin than policy B (90% bootstrap interval for the difference: +1.3% to +1.7%) at equal or lower risk."
+  },
+  "by_rule": {
+    "cut_proportional": {
+      "scope": "holdout windows, stress sweep, cut_proportional",
+      "n_scenarios": 6,
+      "n_weeks": 156,
+      "ci_level": 0.9,
+      "n_boot": 2000,
+      "block_weeks": 4,
+      "shortfall_weeks": {
+        "A": 1,
+        "B": 0,
+        "C": 0
+      },
+      "insolvency_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "gross_margin": {
+        "A": 684087.978,
+        "B": 675296.0859999999,
+        "C": 682315.1440000001
+      },
+      "x_pct_fewer_shortfalls_vs_A": 100.0,
+      "x_ci": [
+        100.0,
+        100.0
+      ],
+      "y_pct_margin_vs_B": 1.0394045138890669,
+      "y_ci": [
+        0.8036010797128619,
+        1.2969810563319044
+      ],
+      "margin_vs_A_pct": -0.2591529243333546,
+      "risk_equal_or_lower_than_B": true,
+      "prob_risk_equal_or_lower_than_B": 1.0,
+      "x_interval_excludes_zero": true,
+      "y_interval_excludes_zero": true,
+      "supports_decided_form": true,
+      "sentence": "100.0% fewer cash shortfalls than policy A (90% bootstrap interval for the reduction: +100.0% to +100.0%), and 1.0% higher margin than policy B (90% bootstrap interval for the difference: +0.8% to +1.3%) at equal or lower risk."
+    },
+    "overdraft": {
+      "scope": "holdout windows, stress sweep, overdraft",
+      "n_scenarios": 6,
+      "n_weeks": 156,
+      "ci_level": 0.9,
+      "n_boot": 2000,
+      "block_weeks": 4,
+      "shortfall_weeks": {
+        "A": 3,
+        "B": 0,
+        "C": 0
+      },
+      "insolvency_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "gross_margin": {
+        "A": 684624.1620000001,
+        "B": 675452.4,
+        "C": 685213.02
+      },
+      "x_pct_fewer_shortfalls_vs_A": 100.0,
+      "x_ci": [
+        100.0,
+        100.0
+      ],
+      "y_pct_margin_vs_B": 1.445049273642376,
+      "y_ci": [
+        1.28969172465083,
+        1.6728402685622241
+      ],
+      "margin_vs_A_pct": 0.08601186354271424,
+      "risk_equal_or_lower_than_B": true,
+      "prob_risk_equal_or_lower_than_B": 1.0,
+      "x_interval_excludes_zero": true,
+      "y_interval_excludes_zero": true,
+      "supports_decided_form": true,
+      "sentence": "100.0% fewer cash shortfalls than policy A (90% bootstrap interval for the reduction: +100.0% to +100.0%), and 1.4% higher margin than policy B (90% bootstrap interval for the difference: +1.3% to +1.7%) at equal or lower risk."
+    }
+  },
+  "by_stress": {
+    "0.5": {
+      "scope": "holdout windows, stress 0.5, overdraft",
+      "n_scenarios": 2,
+      "n_weeks": 52,
+      "ci_level": 0.9,
+      "n_boot": 2000,
+      "block_weeks": 4,
+      "shortfall_weeks": {
+        "A": 3,
+        "B": 0,
+        "C": 0
+      },
+      "insolvency_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "gross_margin": {
+        "A": 228208.05400000003,
+        "B": 225150.80000000002,
+        "C": 227101.45400000003
+      },
+      "x_pct_fewer_shortfalls_vs_A": 100.0,
+      "x_ci": [
+        100.0,
+        100.0
+      ],
+      "y_pct_margin_vs_B": 0.866376668437336,
+      "y_ci": [
+        0.5011084056816125,
+        1.18317684346762
+      ],
+      "margin_vs_A_pct": -0.48490838978014583,
+      "risk_equal_or_lower_than_B": true,
+      "prob_risk_equal_or_lower_than_B": 1.0,
+      "x_interval_excludes_zero": true,
+      "y_interval_excludes_zero": true,
+      "supports_decided_form": true,
+      "sentence": "100.0% fewer cash shortfalls than policy A (90% bootstrap interval for the reduction: +100.0% to +100.0%), and 0.9% higher margin than policy B (90% bootstrap interval for the difference: +0.5% to +1.2%) at equal or lower risk."
+    },
+    "0.7": {
+      "scope": "holdout windows, stress 0.7, overdraft",
+      "n_scenarios": 2,
+      "n_weeks": 52,
+      "ci_level": 0.9,
+      "n_boot": 2000,
+      "block_weeks": 4,
+      "shortfall_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "insolvency_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "gross_margin": {
+        "A": 228208.05400000003,
+        "B": 225150.80000000002,
+        "C": 228857.354
+      },
+      "x_pct_fewer_shortfalls_vs_A": NaN,
+      "x_ci": null,
+      "y_pct_margin_vs_B": 1.6462539773342908,
+      "y_ci": [
+        1.3415495218061482,
+        1.981678977721134
+      ],
+      "margin_vs_A_pct": 0.2845210712852225,
+      "risk_equal_or_lower_than_B": true,
+      "prob_risk_equal_or_lower_than_B": 1.0,
+      "x_interval_excludes_zero": false,
+      "y_interval_excludes_zero": true,
+      "supports_decided_form": false,
+      "sentence": "Policy A had no cash-shortfall weeks in this setting and policy C had 0, and 1.6% higher margin than policy B (90% bootstrap interval for the difference: +1.3% to +2.0%), with no more shortfall weeks than B (0 vs 0). Against policy A, C's margin was 0.3% higher. The planned headline form is not supported by this run, so the result is stated as it happened."
+    },
+    "0.9": {
+      "scope": "holdout windows, stress 0.9, overdraft",
+      "n_scenarios": 2,
+      "n_weeks": 52,
+      "ci_level": 0.9,
+      "n_boot": 2000,
+      "block_weeks": 4,
+      "shortfall_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "insolvency_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "gross_margin": {
+        "A": 228208.05400000003,
+        "B": 225150.80000000002,
+        "C": 229254.212
+      },
+      "x_pct_fewer_shortfalls_vs_A": NaN,
+      "x_ci": null,
+      "y_pct_margin_vs_B": 1.8225171751554876,
+      "y_ci": [
+        1.5532600477425718,
+        2.24980020362006
+      ],
+      "margin_vs_A_pct": 0.45842290912307876,
+      "risk_equal_or_lower_than_B": true,
+      "prob_risk_equal_or_lower_than_B": 1.0,
+      "x_interval_excludes_zero": false,
+      "y_interval_excludes_zero": true,
+      "supports_decided_form": false,
+      "sentence": "Policy A had no cash-shortfall weeks in this setting and policy C had 0, and 1.8% higher margin than policy B (90% bootstrap interval for the difference: +1.6% to +2.2%), with no more shortfall weeks than B (0 vs 0). Against policy A, C's margin was 0.5% higher. The planned headline form is not supported by this run, so the result is stated as it happened."
+    }
+  },
+  "by_window": {
+    "W3": {
+      "scope": "window W3, stress sweep, overdraft",
+      "n_scenarios": 3,
+      "n_weeks": 78,
+      "ci_level": 0.9,
+      "n_boot": 2000,
+      "block_weeks": 4,
+      "shortfall_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "insolvency_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "gross_margin": {
+        "A": 344466.37200000003,
+        "B": 340286.196,
+        "C": 346653.602
+      },
+      "x_pct_fewer_shortfalls_vs_A": NaN,
+      "x_ci": null,
+      "y_pct_margin_vs_B": 1.871191389732429,
+      "y_ci": [
+        1.671302437517037,
+        2.1136142124844075
+      ],
+      "margin_vs_A_pct": 0.634961835984379,
+      "risk_equal_or_lower_than_B": true,
+      "prob_risk_equal_or_lower_than_B": 1.0,
+      "x_interval_excludes_zero": false,
+      "y_interval_excludes_zero": true,
+      "supports_decided_form": false,
+      "sentence": "Policy A had no cash-shortfall weeks in this setting and policy C had 0, and 1.9% higher margin than policy B (90% bootstrap interval for the difference: +1.7% to +2.1%), with no more shortfall weeks than B (0 vs 0). Against policy A, C's margin was 0.6% higher. The planned headline form is not supported by this run, so the result is stated as it happened."
+    },
+    "W4": {
+      "scope": "window W4, stress sweep, overdraft",
+      "n_scenarios": 3,
+      "n_weeks": 78,
+      "ci_level": 0.9,
+      "n_boot": 2000,
+      "block_weeks": 4,
+      "shortfall_weeks": {
+        "A": 3,
+        "B": 0,
+        "C": 0
+      },
+      "insolvency_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "gross_margin": {
+        "A": 340157.79000000004,
+        "B": 335166.204,
+        "C": 338559.418
+      },
+      "x_pct_fewer_shortfalls_vs_A": 100.0,
+      "x_ci": [
+        100.0,
+        100.0
+      ],
+      "y_pct_margin_vs_B": 1.0123974194009064,
+      "y_ci": [
+        0.7041122205500877,
+        1.3762760947603687
+      ],
+      "margin_vs_A_pct": -0.4698913407216198,
+      "risk_equal_or_lower_than_B": true,
+      "prob_risk_equal_or_lower_than_B": 1.0,
+      "x_interval_excludes_zero": true,
+      "y_interval_excludes_zero": true,
+      "supports_decided_form": true,
+      "sentence": "100.0% fewer cash shortfalls than policy A (90% bootstrap interval for the reduction: +100.0% to +100.0%), and 1.0% higher margin than policy B (90% bootstrap interval for the difference: +0.7% to +1.4%) at equal or lower risk."
+    }
+  },
+  "other_roles": {
+    "tune": {
+      "scope": "tune windows, stress sweep, overdraft",
+      "n_scenarios": 6,
+      "n_weeks": 156,
+      "ci_level": 0.9,
+      "n_boot": 2000,
+      "block_weeks": 4,
+      "shortfall_weeks": {
+        "A": 54,
+        "B": 36,
+        "C": 38
+      },
+      "insolvency_weeks": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      },
+      "gross_margin": {
+        "A": 622536.798,
+        "B": 610747.59,
+        "C": 611718.4800000001
+      },
+      "x_pct_fewer_shortfalls_vs_A": 29.62962962962963,
+      "x_ci": [
+        18.181818181818183,
+        47.05882352941177
+      ],
+      "y_pct_margin_vs_B": 0.15896747132479563,
+      "y_ci": [
+        -0.22537786820608946,
+        0.42199804734827107
+      ],
+      "margin_vs_A_pct": -1.7377796838284014,
+      "risk_equal_or_lower_than_B": false,
+      "prob_risk_equal_or_lower_than_B": 0.279,
+      "x_interval_excludes_zero": true,
+      "y_interval_excludes_zero": false,
+      "supports_decided_form": false,
+      "sentence": "Policy C had 29.6% fewer cash-shortfall weeks than policy A (38 vs 54) (90% bootstrap interval for the reduction: +18.2% to +47.1%), and 0.2% higher margin than policy B (90% bootstrap interval for the difference: -0.2% to +0.4%), but more shortfall weeks than B (38 vs 36). Against policy A, C's margin was 1.7% lower. The planned headline form is not supported by this run, so the result is stated as it happened."
+    }
+  }
+}

@@ -83,7 +83,7 @@ def headline_rows(named: list[tuple[str, dict | None]]) -> str:
             {
                 "Scope": label,
                 "Shortfall weeks A / B / C": f"{sf['A']} / {sf['B']} / {sf['C']}",
-                "X: fewer shortfalls than A": "n/a (A had none)" if sf["A"] == 0 else f"{h['x_pct_fewer_shortfalls_vs_A']:+.0f}%",
+                "X: fewer shortfalls than A": "n/a (A had none)" if sf["A"] == 0 else f"{h['x_pct_fewer_shortfalls_vs_A']:+.1f}%",
                 f"X {h['ci_level']:.0%} interval": "n/a" if sf["A"] == 0 else ci_txt(h, "x_ci"),
                 "Y: margin vs B": f"{h['y_pct_margin_vs_B']:+.1f}%",
                 f"Y {h['ci_level']:.0%} interval": ci_txt(h, "y_ci"),
@@ -261,9 +261,12 @@ def demo_block(run: Path, cfg, exp) -> dict[str, str]:
         res = compute_week_plan(b, sid, int(week), alpha, buf, n_paths, fb)
         g = res["gate"]
         if g["status"] == "constrained":
-            gap = g["B_max"] - g["B"]
-            if best is None or gap > best[0]:
-                best = (gap, i, week, res)
+            # Most instructive week to show: the gate is binding and the cash-blind order (policy A)
+            # would carry the largest shortfall risk. Ties go to the larger gap between full and safe.
+            risk_a = float(res["compare"].set_index("plan").loc["A", "p_shortfall"])
+            score = (round(risk_a, 3), g["B_max"] - g["B"])
+            if best is None or score > best[0]:
+                best = (score, i, week, res)
     if best is None:
         txt = f"No week in the bundled scenario (stress {int(round(scen['stress'] * 100))}%) has a binding cash gate at default settings, so there is no constrained week to demo. Lower the risk-tolerance slider or raise the buffer in the app to show the gate binding."
         return {"demo_week": txt, "demo_figure": txt}
@@ -276,8 +279,8 @@ def demo_block(run: Path, cfg, exp) -> dict[str, str]:
         f"The shop has {w['cash']} in the bank against a {w['buffer']} buffer. Everything worth buying costs {w['full_cost']}, which would leave only a "
         f"{w['prob_safe_full']} chance of staying above the buffer. The safe budget at {w['target']} confidence is {w['budget']}; the plan spends {w['spend']}: "
         f"{w['n_full']} items in full, {w['n_partial']} in part, {w['n_defer']} deferred, at an expected cost of {w['deferred_loss']} in margin. "
-        f"For comparison, policy A would spend {usd(cmp_.loc['A', 'spend'])} with a {cmp_.loc['A', 'p_shortfall']:.0%} chance of a shortfall, "
-        f"and policy B {usd(cmp_.loc['B', 'spend'])} with {cmp_.loc['B', 'p_shortfall']:.0%}."
+        f"For comparison, from the same position policy A would spend {usd(cmp_.loc['A', 'spend'])} with a {cmp_.loc['A', 'p_shortfall']:.0%} chance of a shortfall, "
+        f"and policy B {usd(cmp_.loc['B', 'spend'])} with {cmp_.loc['B', 'p_shortfall']:.0%}; this plan's chance is {cmp_.loc['C', 'p_shortfall']:.0%}."
     )
     return {"demo_week": txt, "demo_figure": figure}
 

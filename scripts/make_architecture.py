@@ -25,7 +25,7 @@ BOXES = {
     "cache": (0.765, 0.635, 0.20, 0.10, "Forecast cache\n(shared by all policies)"),
     "samp": (0.04, 0.42, 0.21, 0.10, "Joint demand sampler\n(cross-SKU correlation)"),
     "cash": (0.30, 0.42, 0.21, 0.10, "Monte Carlo\ncash model"),
-    "gate": (0.56, 0.42, 0.19, 0.10, "Cash gate:\nlargest safe budget B"),
+    "gate": (0.56, 0.42, 0.19, 0.10, "Cash gate: largest safe\nbudget B (else best chance)"),
     "allocb": (0.30, 0.315, 0.285, 0.065, "Marginal-value allocator\nexpected profit per dollar, packs, MOQs"),
     "plan": (0.795, 0.42, 0.17, 0.10, "Plan per SKU:\nfull / partial / defer"),
     "base": (0.04, 0.10, 0.175, 0.10, "Baselines A, B, D\n+ two ablations"),

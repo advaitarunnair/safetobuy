@@ -11,4 +11,4 @@ Produced by `make screenshots` after `make backtest` (headless Chrome, one full-
 
 To pin the plan page to the week used in the demo script: `make screenshots QUERY="stress=70&week=5"`.
 
-No screenshots are committed yet: none can be taken until a backtest has been run on real M5 data.
+The committed screenshots were taken from the run named in `results/LATEST`, with the plan page pinned to the demo week.

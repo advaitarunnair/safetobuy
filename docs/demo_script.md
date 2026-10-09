@@ -2,7 +2,8 @@
 
 > Blocks between `BEGIN` and `END` markers are written by `scripts/render_results.py`, so the
 > numbers you say are the numbers on screen. Lines in quotation marks are spoken; everything else
-> is stage direction. Spoken text is about 470 words: at a normal pace that is under four minutes.
+> is stage direction. Spoken text is about 390 words, roughly two and a half minutes of speech, which leaves
+> a minute for pointing and clicking.
 
 **Before recording:** `make app`. Open the plan page at the scenario and week named in beat 3.
 Keep the "Backtest results" page one click away in the sidebar.
@@ -19,7 +20,7 @@ Keep the "Backtest results" page one click away in the sidebar.
 *Read the figure below from the screen:*
 
 <!-- BEGIN:demo_figure -->
-_No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._
+$24,708 in the bank, and everything worth buying this week costs $33,463. The safe budget is $16,383.
 <!-- END:demo_figure -->
 
 > "Small shops rarely fail because nothing sells. They fail because the rent is due the same
@@ -60,7 +61,7 @@ _No results yet. Place the M5 files in `data/raw/`, run `make all`, and this blo
 *On screen: the "Safe budget this week" line, then the table. The scenario, week and numbers:*
 
 <!-- BEGIN:demo_week -->
-_No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._
+In the app choose **Budget stress 70%** and **decision week 2** (2015-11-28), default sliders. The shop has $24,708 in the bank against a $15,600 buffer. Everything worth buying costs $33,463, which would leave only a 0% chance of staying above the buffer. The safe budget at 90% confidence is $16,383; the plan spends $16,383: 8 items in full, 204 in part, 49 deferred, at an expected cost of $478 in margin. For comparison, from the same position policy A would spend $20,796 with a 45% chance of a shortfall, and policy B $9,490 with 1%; this plan's chance is 10%.
 <!-- END:demo_week -->
 
 > "So the tool does three things. It says how much is safe to spend. It spends that on the units
@@ -82,7 +83,7 @@ _No results yet. Place the M5 files in `data/raw/`, run `make all`, and this blo
 *Read the result exactly as generated:*
 
 <!-- BEGIN:headline_spoken -->
-_No results yet. Place the M5 files in `data/raw/`, run `make all`, and this block is filled in by `scripts/render_results.py`._
+On data we never tuned on, our policy had 27.9 percent fewer cash-shortfall weeks than the standard reorder-point rule, and 1.0 percent more margin than open-to-buy. It was not a clean sweep: it had 62 shortfall weeks to open-to-buy's 58, and it gave up 2.9 percent of margin against buying regardless of cash.
 <!-- END:headline_spoken -->
 
 > "Open-to-buy gives you a budget. We tell you whether you can afford it, and how to spend it

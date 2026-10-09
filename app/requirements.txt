@@ -1,0 +1,10 @@
+# Lean requirements for running or deploying the app from the committed results bundle.
+# Streamlit Community Cloud uses this file because it sits next to the app's entry point.
+# No LightGBM, scikit-learn or matplotlib: the app only replays the cash gate and allocator.
+numpy==2.3.5
+pandas==2.3.3
+pyarrow==25.0.1
+pyyaml==6.0.3
+streamlit==1.65.0
+plotly==7.1.0
+anthropic==1.12.1      # only used if ANTHROPIC_API_KEY is set; otherwise explanations use templates

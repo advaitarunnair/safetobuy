@@ -20,7 +20,7 @@ flowchart TB
     subgraph DEC["Decision (simulation + optimization, not ML)"]
         SAMP["Joint demand sampler<br/>residual-block bootstrap,<br/>keeps cross-SKU correlation"]
         CASH["Monte Carlo cash model<br/>cash = cash + revenue - fixed - supplier payments"]
-        GATE["Cash gate<br/>largest budget B with<br/>P(cash never below buffer) >= 1 - alpha"]
+        GATE["Cash gate<br/>largest budget B with<br/>P(cash never below buffer) >= 1 - alpha<br/>(if none is safe: best-chance budget, flagged)"]
         ALLOC["Marginal-value allocator<br/>fund units by expected profit per dollar,<br/>packs and MOQs"]
         PLAN["Purchase plan per SKU<br/>full / partial / defer"]
         SAMP --> CASH
@@ -68,7 +68,7 @@ flowchart TB
 
 1. Forecast: read the cached quantile forecast for the cutoff week (last observed week).
 2. Sample: draw joint demand paths for the next four weeks from the forecast and the bank of past forecast errors.
-3. Gate: bisect on the budget B. Each candidate B runs the allocator, then the cash simulation on the same demand paths, and reads off P(cash never below the buffer). A coarse grid then checks the result, because buying stock that sells quickly can raise cash and break monotonicity.
+3. Gate: bisect on the budget B. Each candidate B runs the allocator, then the cash simulation on the same demand paths, and reads off P(cash never below the buffer). A coarse grid then checks the result, because buying stock that sells quickly can raise cash and break monotonicity. If no budget meets the target, the gate returns the one with the best chance and flags the plan.
 4. Allocate: spend the safe budget on the units with the highest expected profit per dollar.
 5. Explain: turn the plan into facts, then sentences.
 6. In the backtest only: step the simulated shop with the actual M5 demand for that week and repeat.
